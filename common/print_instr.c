@@ -11,7 +11,7 @@
 #define PRINT_R2(op) printf("%s r%d, r%d, r%d\n", op, instr->rd, instr->rt, instr->rs)
 #define PRINT_S(op) printf("%s r%d, r%d, %d\n", op, instr->rd, instr->rt, instr->shamt)
 #define PRINT_I(op) printf("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->imm)
-#define PRINT_I2(op) printf("%s r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
+#define PRINT_I2(op) printf("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
 #define PRINT_Is(op) printf("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
 #define PRINT_LS(op) printf("%s r%d, %d(r%d)\n", op, instr->rt, instr->simm, instr->rs)
 
