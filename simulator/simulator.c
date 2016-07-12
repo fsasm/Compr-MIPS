@@ -37,7 +37,7 @@ static void usage(void)
 	exit(EXIT_FAILURE);
 }
 
-static int str_to_int(const char *str)
+static uint32_t str_to_uint32(const char *str)
 {
 	char *endptr = NULL;
 	errno = 0;
@@ -53,7 +53,12 @@ static int str_to_int(const char *str)
 		exit(EXIT_FAILURE);
 	}
 
-	return (int)res;
+	if (res > UINT32_MAX) {
+		fprintf(stderr, "value is too high\n");
+		exit(EXIT_FAILURE);
+	}
+
+	return (uint32_t)res;
 }
 
 uint32_t u8to32(const uint8_t from[4]) {
@@ -536,9 +541,9 @@ int main(int argc, char *argv[])
 	if (argc > 0)
 		program_name = argv[0];
 	
-	int imem_size  = DEFAULT_IMEM_SIZE;
-	int dmem_size  = DEFAULT_DMEM_SIZE;
-	int num_cycles = DEFAULT_NUM_CYCLES;
+	uint32_t imem_size  = DEFAULT_IMEM_SIZE;
+	uint32_t dmem_size  = DEFAULT_DMEM_SIZE;
+	uint32_t num_cycles = DEFAULT_NUM_CYCLES;
 
 	const char *bin_file_path = NULL;
 	const char *data_file_path = NULL;
@@ -548,15 +553,15 @@ int main(int argc, char *argv[])
 	while ((opt = getopt(argc, argv, "i:d:c:x")) != -1) {
 		switch (opt) {
 		case 'i':
-			imem_size = 1024 * str_to_int(optarg);
+			imem_size = 1024 * str_to_uint32(optarg);
 			break;
 
 		case 'd':
-			dmem_size = 1024 * str_to_int(optarg);
+			dmem_size = 1024 * str_to_uint32(optarg);
 			break;
 
 		case 'c':
-			num_cycles = str_to_int(optarg);
+			num_cycles = str_to_uint32(optarg);
 			break;
 
 		case 'x':
