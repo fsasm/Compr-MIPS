@@ -22,6 +22,8 @@
 
 #define PC_START (0x40000000)
 #define DEFAULT_NUM_CYCLES (256)
+#define DEFAULT_IMEM_SIZE (16 * 1024)
+#define DEFAULT_DMEM_SIZE (16 * 1024)
 
 static char *program_name = "simulator";
 static bool debug = false;
@@ -534,8 +536,8 @@ int main(int argc, char *argv[])
 	if (argc > 0)
 		program_name = argv[0];
 	
-	int imem_size = 1 * 1024 * 1024; // 1 MiB
-	int dmem_size =	2 * 1024 * 1024; // 2 MiB -> SPSTART = 0x200000
+	int imem_size  = DEFAULT_IMEM_SIZE;
+	int dmem_size  = DEFAULT_DMEM_SIZE;
 	int num_cycles = DEFAULT_NUM_CYCLES;
 
 	const char *bin_file_path = NULL;
@@ -570,6 +572,11 @@ int main(int argc, char *argv[])
 	if (optind >= argc) {
 		fprintf(stderr, "missing binary file\n");
 		usage();
+	}
+
+	if (dmem_size > PC_START) {
+		fprintf(stderr, "size of data memory is too big.\n");
+		exit(EXIT_FAILURE);
 	}
 
 	bin_file_path = argv[optind];
