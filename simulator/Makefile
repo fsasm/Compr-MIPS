@@ -3,7 +3,7 @@
 # Date: 2016-07-12
 
 CC=gcc
-CFLAGS=-Wall -Wextra -std=c99 -g -Og -D_XOPEN_SOURCE=500 -D_DEFADEFAULT_SOURCE
+CFLAGS=-Wall -Wextra -std=c99 -O2 -D_XOPEN_SOURCE=500 -D_DEFAULT_SOURCE
 
 .PHONY: all clean
 

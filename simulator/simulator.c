@@ -61,6 +61,30 @@ static uint32_t str_to_uint32(const char *str)
 	return (uint32_t)res;
 }
 
+static uint64_t str_to_uint64(const char *str)
+{
+	char *endptr = NULL;
+	errno = 0;
+	unsigned long res = strtoul(str, &endptr, 10);
+
+	if (endptr == str) {
+		fprintf(stderr, "no digits in string\n");
+		usage();
+	}
+
+	if ((errno == ERANGE && res == ULONG_MAX) || (errno != 0 && res == 0)) {
+		perror("strtoul");
+		exit(EXIT_FAILURE);
+	}
+
+	if (res > UINT64_MAX) {
+		fprintf(stderr, "value is too high\n");
+		exit(EXIT_FAILURE);
+	}
+
+	return (uint64_t)res;
+}
+
 uint32_t u8to32(const uint8_t from[4]) {
 	uint32_t to = 0;
 	for (int i = 0; i < 4; i++) {
@@ -254,6 +278,7 @@ void sb(struct simulator *sim, uint32_t addr, uint32_t value)
 {
 	if (addr == 0xFFFFFFFC) {
 		printf("%c", value & 0xFF);
+		fflush(stdout);
 	}
 
 	if (addr == 0xFFFFFFF8) {
@@ -270,6 +295,7 @@ void sh(struct simulator *sim, uint32_t addr, uint32_t value)
 {
 	if (addr == 0xFFFFFFFC) {
 		printf("%c", value & 0xFF);
+		fflush(stdout);
 	}
 
 	if (addr == 0xFFFFFFF8) {
@@ -287,6 +313,7 @@ void sw(struct simulator *sim, uint32_t addr, uint32_t value)
 {
 	if (addr == 0xFFFFFFFC) {
 		printf("%c", value & 0xFF);
+		fflush(stdout);
 	}
 
 	if (addr == 0xFFFFFFF8) {
@@ -302,9 +329,9 @@ void sw(struct simulator *sim, uint32_t addr, uint32_t value)
 	sim->dmem[addr + 0] = (value >> 24) & 0xFF;
 }
 
-void simulator_run(struct simulator *sim, uint32_t num_steps)
+void simulator_run(struct simulator *sim, uint64_t num_steps)
 {
-	for (uint32_t i = 0; i < num_steps; i++) {
+	for (uint64_t i = 0; i < num_steps; i++) {
 		uint32_t pc = sim->cur_pc;
 		if (pc < PC_START) {
 			fprintf(stdout, "Invalid pc(0x%X). Must be >= 0x%X\n", pc, PC_START);
@@ -330,6 +357,11 @@ void simulator_run(struct simulator *sim, uint32_t num_steps)
 		uint32_t imm = instr.imm;
 		int32_t simm = instr.simm;
 
+		if (instr.rt == 0)
+			rt = 0;
+	
+		if (instr.rs == 0)
+			rs = 0;
 
 		switch(instr.op) {
 		case SLL:
@@ -358,6 +390,7 @@ void simulator_run(struct simulator *sim, uint32_t num_steps)
 
 		case ADD: /* TODO check for overflow */
 			sim->reg[instr.rd] = rt + rs;
+			fprintf(stderr, "ADD: overflow not implemented\n");
 			break;
 
 		case ADDU:
@@ -366,6 +399,7 @@ void simulator_run(struct simulator *sim, uint32_t num_steps)
 
 		case SUB: /* TODO check for overflow */
 			sim->reg[instr.rd] = rs - rt;
+			fprintf(stderr, "SUB: overflow not implemented\n");
 			break;
 		
 		case SUBU: 
@@ -390,6 +424,7 @@ void simulator_run(struct simulator *sim, uint32_t num_steps)
 
 		case ADDI: /* TODO overflow */
 			sim->reg[instr.rt] = rs + simm;
+			fprintf(stderr, "ADDI: overflow not implemented\n");
 			break;
 
 		case ADDIU:
@@ -505,7 +540,7 @@ void simulator_run(struct simulator *sim, uint32_t num_steps)
 			break;
 
 		case BGTZ:
-			if (rs < 0x80000000 || rs > 0) {
+			if (rs < 0x80000000 && rs > 0) {
 				sim->next_pc = sim->cur_pc + simm * 4;
 			}
 			break;
@@ -543,7 +578,7 @@ int main(int argc, char *argv[])
 	
 	uint32_t imem_size  = DEFAULT_IMEM_SIZE;
 	uint32_t dmem_size  = DEFAULT_DMEM_SIZE;
-	uint32_t num_cycles = DEFAULT_NUM_CYCLES;
+	uint64_t num_cycles = DEFAULT_NUM_CYCLES;
 
 	const char *bin_file_path = NULL;
 	const char *data_file_path = NULL;
@@ -561,7 +596,7 @@ int main(int argc, char *argv[])
 			break;
 
 		case 'c':
-			num_cycles = str_to_uint32(optarg);
+			num_cycles = str_to_uint64(optarg);
 			break;
 
 		case 'x':

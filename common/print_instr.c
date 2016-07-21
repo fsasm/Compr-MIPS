@@ -176,6 +176,7 @@ void print_instr(struct instr *instr)
 	
 	case BGTZ:
 		PRINT_I2("bgtz");
+		break;
 	
 	case J:
 		printf("j 0x%X\n", instr->addr);
