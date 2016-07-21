@@ -225,8 +225,8 @@ uint32_t lh(struct simulator *sim, uint32_t addr)
 		return 0; /* TODO */
 	}
 	
-	uint16_t b0 = sim->dmem[addr];
-	uint16_t b1 = sim->dmem[addr + 1];
+	uint16_t b0 = sim->dmem[addr + 1];
+	uint16_t b1 = sim->dmem[addr];
 	b0 |= b1 << 8;
 	return sign_h(b0);
 }
@@ -245,10 +245,10 @@ uint32_t lhu(struct simulator *sim, uint32_t addr)
 		return 0; /* TODO */
 	}
 	
-	uint16_t b0 = sim->dmem[addr];
-	uint16_t b1 = sim->dmem[addr + 1];
-	b1 |= b0 << 8;
-	return b1;
+	uint16_t b0 = sim->dmem[addr + 1];
+	uint16_t b1 = sim->dmem[addr];
+	b0 |= b1 << 8;
+	return b0;
 }
 
 uint32_t lw(struct simulator *sim, uint32_t addr)
