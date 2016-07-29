@@ -184,7 +184,8 @@ uint32_t lb(struct simulator *sim, uint32_t addr)
 	}
 
 	if (addr == 0xFFFFFFFC) { /* UART_DATA */
-		return 0x00; /* TODO */
+		uint32_t c = getchar() & 0xFF;
+		return sign_b(c);
 	}
 
 	if (addr >= sim->dmem_size) {
@@ -201,7 +202,7 @@ uint32_t lbu(struct simulator *sim, uint32_t addr)
 	}
 
 	if (addr == 0xFFFFFFFC) { /* UART_DATA */
-		return 0x00; /* TODO */
+		return getchar() & 0xFF;
 	}
 
 	if (addr >= sim->dmem_size) {
