@@ -12,6 +12,6 @@ all: analyzer
 clean:
 	rm -f analyzer
 
-analyzer: analyzer.c ../common/instr.c 
+analyzer: analyzer.c ../common/instr.c imm_list.c
 	$(CC) $(CFLAGS) -o $@ $^
 
