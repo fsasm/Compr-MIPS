@@ -7,13 +7,13 @@
 #include "print_instr.h"
 #include <stdio.h>
 
-#define PRINT_R(op) printf("%s r%d, r%d, r%d\n", op, instr->rd, instr->rs, instr->rt)
-#define PRINT_R2(op) printf("%s r%d, r%d, r%d\n", op, instr->rd, instr->rt, instr->rs)
-#define PRINT_S(op) printf("%s r%d, r%d, %d\n", op, instr->rd, instr->rt, instr->shamt)
-#define PRINT_I(op) printf("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->imm)
-#define PRINT_I2(op) printf("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
-#define PRINT_Is(op) printf("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
-#define PRINT_LS(op) printf("%s r%d, %d(r%d)\n", op, instr->rt, instr->simm, instr->rs)
+#define PRINT_R(op) fprintf(stderr, "%s r%d, r%d, r%d\n", op, instr->rd, instr->rs, instr->rt)
+#define PRINT_R2(op) fprintf(stderr, "%s r%d, r%d, r%d\n", op, instr->rd, instr->rt, instr->rs)
+#define PRINT_S(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rd, instr->rt, instr->shamt)
+#define PRINT_I(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->imm)
+#define PRINT_I2(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
+#define PRINT_Is(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
+#define PRINT_LS(op) fprintf(stderr, "%s r%d, %d(r%d)\n", op, instr->rt, instr->simm, instr->rs)
 
 void print_instr(struct instr *instr)
 {
@@ -95,7 +95,7 @@ void print_instr(struct instr *instr)
 		break;
 
 	case LUI:
-		printf("lui r%d, 0x%X\n", instr->rt, instr->imm);
+		fprintf(stderr, "lui r%d, 0x%X\n", instr->rt, instr->imm);
 		break;
 
 	case LB:
@@ -179,22 +179,22 @@ void print_instr(struct instr *instr)
 		break;
 	
 	case J:
-		printf("j 0x%X\n", instr->addr);
+		fprintf(stderr, "j 0x%X\n", instr->addr);
 		break;
 	
 	case JAL:
-		printf("jal 0x%X\n", instr->addr);
+		fprintf(stderr, "jal 0x%X\n", instr->addr);
 		break;
 	
 	case JR:
-		printf("jr r%d\n", instr->rs);
+		fprintf(stderr, "jr r%d\n", instr->rs);
 		break;
 	
 	case JALR:
-		printf("jalr r%d, r%d\n", instr->rd, instr->rs);
+		fprintf(stderr, "jalr r%d, r%d\n", instr->rd, instr->rs);
 		break;
 
 	default:
-		printf("unkown op\n");
+		fprintf(stderr, "unkown op\n");
 	}
 }

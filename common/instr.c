@@ -7,6 +7,7 @@
 #include "instr.h"
 #include <stdio.h>
 #include <assert.h>
+#include <stdbool.h>
 
 static uint8_t get_opcode(uint32_t instr)
 {
@@ -88,6 +89,42 @@ static enum operation parse_special(uint32_t instr)
 
 	case 0x09: /* JALR */
 		return JALR;
+
+	case 0x0D: /* BREAK */
+		fprintf(stderr, "Unsupported BREAK\n");
+		return INVALID_OP;
+
+	case 0x10: /* MFHI */
+		fprintf(stderr, "Unsupported MFHI\n");
+		return INVALID_OP;
+
+	case 0x11: /* MTHI */
+		fprintf(stderr, "Unsupported MTHI\n");
+		return INVALID_OP;
+
+	case 0x12: /* MFLO */
+		fprintf(stderr, "Unsupported MFLO\n");
+		return INVALID_OP;
+
+	case 0x13: /* MTLO */
+		fprintf(stderr, "Unsupported MTLO\n");
+		return INVALID_OP;
+
+	case 0x18: /* MULT */
+		fprintf(stderr, "Unsupported MULT\n");
+		return INVALID_OP;
+
+	case 0x19: /* MULTU */
+		fprintf(stderr, "Unsupported MULTU\n");
+		return INVALID_OP;
+
+	case 0x1A: /* DIV */
+		fprintf(stderr, "Unsupported DIV\n");
+		return INVALID_OP;
+
+	case 0x1B: /* DIVU */
+		fprintf(stderr, "Unsupported DIVU\n");
+		return INVALID_OP;
 
 	case 0x20: /* ADD */
 		return ADD;
