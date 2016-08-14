@@ -177,6 +177,8 @@ uint32_t sign_h(uint16_t half)
 	return 0xFFFF0000 | half;
 }
 
+static bool is_eof = false;
+
 uint32_t lb(struct simulator *sim, uint32_t addr)
 {
 	if (addr == 0xFFFFFFF8) { /* UART_STATUS */
@@ -184,8 +186,12 @@ uint32_t lb(struct simulator *sim, uint32_t addr)
 	}
 
 	if (addr == 0xFFFFFFFC) { /* UART_DATA */
+		if (is_eof)
+			return 1;
+
 		int c = getchar();
 		if (c == EOF) {
+			is_eof = true;
 			return 0;
 		}
 		return sign_b(c);
@@ -205,8 +211,12 @@ uint32_t lbu(struct simulator *sim, uint32_t addr)
 	}
 
 	if (addr == 0xFFFFFFFC) { /* UART_DATA */
+		if (is_eof)
+			return 1;
+
 		int c = getchar();
 		if (c == EOF) {
+			is_eof = true;
 			return 0;
 		}
 		return c;
@@ -356,7 +366,7 @@ void simulator_run(struct simulator *sim, uint64_t num_steps)
 		assert(instr.op < NOP);
 	
 		if (debug) {
-			printf("%8.8X:", pc);
+			fprintf(stderr, "%8.8X:", pc);
 			print_instr(&instr); 
 		}
 
