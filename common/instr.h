@@ -79,6 +79,9 @@ enum operation {
 	BAL, 
 	BEQZ,
 	BNEZ,
+	SEQZ,
+	SNEZ,
+	SLTZ,
 
 	NUM_INSTR,
 	INVALID_OP

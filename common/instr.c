@@ -349,6 +349,8 @@ void conv_pseudo(struct instr *out)
 			out->op = NOP;
 		} else if (shamt == 0) {
 			out->op = MOV;
+		} else if (shamt == 31) {
+			out->op = SLTZ;
 		}
 		break;
 
@@ -516,6 +518,30 @@ void conv_pseudo(struct instr *out)
 			out->op = CLEAR;
 		} else if (imm == 0) {
 			out->op = MOV;
+		}
+		break;
+
+	case SLT:
+		if (rt == 0) {
+			out->op = SLTZ;
+		}
+		break;
+	
+	case SLTU:
+		if (rs == 0) {
+			out->op = SNEZ;
+		}
+		break;
+	
+	case SLTI:
+		if (out->simm == 0) {
+			out->op = SLTZ;
+		}
+		break;
+
+	case SLTIU:
+		if (imm == 1) {
+			out->op = SEQZ;
 		}
 		break;
 	

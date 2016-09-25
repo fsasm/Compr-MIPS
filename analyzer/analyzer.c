@@ -103,6 +103,9 @@ static void print_stat(int freq[NUM_INSTR], int freq_comp[NUM_INSTR], uint32_t t
 		PRINT(BAL);
 		PRINT(BEQZ);
 		PRINT(BNEZ);
+		PRINT(SEQZ);
+		PRINT(SNEZ);
+		PRINT(SLTZ);
 	}
 
 	printf("Total instructions: %u\n", total_instr);
@@ -126,6 +129,9 @@ static bool is_compressible(struct instr *instr)
 	case CLEAR:
 	case NOT:
 	case NEG:
+	case SEQZ:
+	case SNEZ:
+	case SLTZ:
 	case JR:
 	case JALR:
 		return true;
