@@ -5,6 +5,7 @@
  */
 
 #include "instr.h"
+#include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <stdbool.h>
@@ -333,7 +334,7 @@ void parse_instr(uint32_t instr, struct instr *out)
 	}
 }
 
-void conv_pseudo(struct instr *out)
+void conv_to_pseudo(struct instr *out)
 {
 	assert(out != NULL);
 
@@ -695,5 +696,339 @@ bool is_compressible_simple(struct instr *instr)
 	default:
 		return false;
 	}
+}
+
+void conv_to_native(struct instr *out)
+{
+	assert(out != NULL);
+
+	switch(out->op) {
+	case NOP:
+		out->op = ADDU;
+		out->rd = 0;
+		out->rs = 0;
+		out->rt = 0;
+		break;
+
+	case MOV:
+		out->op = ADDU;
+		out->rs = 0;
+		break;
+
+	case CLEAR:
+		out->op = ADDU;
+		out->rs = 0;
+		out->rt = 0;
+		break;
+
+	case NOT:
+		out->op = NOR;
+		break;
+
+	case NEG:
+		out->op = SUBU;
+		out->rs = 0;
+		break;
+
+	case B:
+		out->op = BGEZ;
+		out->rs = 0;
+		break;
+
+	case BAL: 
+		out->op = BGEZAL;
+		out->rs = 0;
+		break;
+
+	case BEQZ:
+		out->op = BEQ;
+		break;
+
+	case BNEZ:
+		out->op = BNE;
+		break;
+
+	case SEQZ:
+		out->op = SLTIU;
+		out->simm = 1;
+		out->imm = 1;
+		break;
+
+	case SNEZ:
+		out->op = SLTU;
+		break;
+
+	case SLTZ:
+		out->op = SLT;
+		break;
+
+	case LSI:
+		out->op = ADDIU;
+		out->rs = 0;
+		break;
+	
+	default:
+		break;
+	}
+
+}
+
+static uint32_t write_r(uint8_t opcode, uint8_t rs, uint8_t rt, uint8_t rd, uint8_t shamt, uint8_t func)
+{
+	assert(opcode < 64);
+	assert(rs < 32);
+	assert(rt < 32);
+	assert(rd < 32);
+	assert(shamt < 32);
+	assert(func < 64);
+
+	uint32_t instr = opcode;
+	instr = (instr << 5) | rs;
+	instr = (instr << 5) | rt;
+	instr = (instr << 5) | rd;
+	instr = (instr << 5) | shamt;
+	instr = (instr << 6) | func;
+
+	return instr;
+}
+
+static uint32_t write_si(uint8_t opcode, uint8_t rs, uint8_t rt, int16_t simm)
+{
+	assert(opcode < 64);
+	assert(rs < 32);
+	assert(rt < 32);
+
+	uint16_t imm;
+	if (simm < 0) {
+		imm = -simm;
+		imm = (~imm) + 1;
+	} else {
+		imm = simm;
+	}
+
+	uint32_t instr = opcode;
+	instr = (instr << 5) | rs;
+	instr = (instr << 5) | rt;
+	instr = (instr << 16) | imm;
+
+	return instr;
+}
+
+static uint32_t write_ui(uint8_t opcode, uint8_t rs, uint8_t rt, uint16_t uimm)
+{
+	assert(opcode < 64);
+	assert(rs < 32);
+	assert(rt < 32);
+
+	uint32_t instr = opcode;
+	instr = (instr << 5) | rs;
+	instr = (instr << 5) | rt;
+	instr = (instr << 16) | uimm;
+
+	return instr;
+}
+
+static uint32_t write_j(uint8_t opcode, uint32_t target)
+{
+	assert(opcode < 64);
+	assert(target < 0x4000000);
+	uint32_t instr = opcode;
+	instr = (instr << 26) | target;
+
+	return instr;
+}
+
+uint32_t write_instr(struct instr *instr)
+{
+	assert(instr != NULL);
+	assert(instr->op < NOP);
+
+	switch(instr->op) {
+	/* ALU */
+	case SLL:
+		write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x00);
+		break;
+
+	case SRL:
+		write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x02);
+		break;
+
+	case SRA:
+		write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x03);
+		break;
+
+	case SLLV:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x04);
+		break;
+
+	case SRLV:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x06);
+		break;
+
+	case SRAV:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x07);
+		break;
+
+	case ADD:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x20);
+		break;
+
+	case ADDU:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x21);
+		break;
+
+	case SUB:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x22);
+		break;
+
+	case SUBU:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x23);
+		break;
+
+	case AND:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x24);
+		break;
+		
+	case OR:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x25);
+		break;
+		
+	case XOR:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x26);
+		break;
+		
+	case NOR:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x27);
+		break;
+
+	/* ALU imm */
+	case ADDI:
+		write_si(0x08, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case ADDIU:
+		write_si(0x09, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case ANDI:
+		write_ui(0x0C, instr->rs, instr->rt, instr->imm);
+		break;
+
+	case ORI:
+		write_ui(0x0D, instr->rs, instr->rt, instr->imm);
+		break;
+
+	case XORI:
+		write_ui(0x0E, instr->rs, instr->rt, instr->imm);
+		break;
+
+	case LUI:
+		write_ui(0x0F, 0x00, instr->rt, instr->imm);
+		break;
+
+	/* load & store */
+	case LB:
+		write_si(0x20, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case LH:
+		write_si(0x21, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case LW:
+		write_si(0x23, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case LBU:
+		write_si(0x24, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case LHU:
+		write_si(0x25, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case SB:
+		write_si(0x28, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case SH:
+		write_si(0x29, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case SW:
+		write_si(0x2B, instr->rs, instr->rt, instr->simm);
+		break;
+
+	/* compare */
+	case SLT:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x2A);
+		break;
+
+	case SLTU:
+		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x2B);
+		break;
+
+	case SLTI:
+		write_si(0x0A, instr->rs, instr->rt, instr->simm);
+		break;
+
+	case SLTIU:
+		write_si(0x0B, instr->rs, instr->rt, instr->simm);
+		break;
+
+	/* branches */
+	case BLTZ:
+		write_si(0x01, instr->rs, 0x00, instr->simm / 4);
+		break;
+
+	case BGEZ:
+		write_si(0x01, instr->rs, 0x01, instr->simm / 4);
+		break;
+
+	case BLTZAL:
+		write_si(0x01, instr->rs, 0x10, instr->simm / 4);
+		break;
+
+	case BGEZAL:
+		write_si(0x01, instr->rs, 0x11, instr->simm / 4);
+		break;
+
+	case BEQ:
+		write_si(0x04, instr->rs, instr->rt, instr->simm / 4);
+		break;
+
+	case BNE:
+		write_si(0x05, instr->rs, instr->rt, instr->simm / 4);
+		break;
+
+	case BLEZ:
+		write_si(0x06, instr->rs, 0x00, instr->simm / 4);
+		break;
+
+	case BGTZ:
+		write_si(0x07, instr->rs, 0x00, instr->simm / 4);
+		break;
+
+	case J:
+		write_j(0x02, instr->addr / 4);
+		break;
+
+	case JAL:
+		write_j(0x03, instr->addr / 4);
+		break;
+
+	case JR:
+		write_r(0x00, instr->rs, 0x00, 0x00, 0x00, 0x08);
+		break;
+
+	case JALR:
+		write_r(0x00, instr->rs, 0x00, instr->rd, 0x00, 0x09);
+		break;
+
+	default:
+		fprintf(stderr, "Unimplemented instruction\n");
+		exit(EXIT_FAILURE);
+	}
+	return 0;
 }
 

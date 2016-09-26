@@ -102,7 +102,9 @@ struct instr {
 };
 
 void parse_instr(uint32_t instr, struct instr *out);
-void conv_pseudo(struct instr *out);
+uint32_t write_instr(struct instr *instr);
+void conv_to_pseudo(struct instr *out);
+void conv_to_native(struct instr *out);
 
 bool is_branch(enum operation op);
 

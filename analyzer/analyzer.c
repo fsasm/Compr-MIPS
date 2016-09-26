@@ -279,7 +279,7 @@ static void analyze2(FILE *in, bool psd)
 		total_instr++;
 		parse_instr(code, &instr);
 		if (psd)
-			conv_pseudo(&instr);
+			conv_to_pseudo(&instr);
 
 		if (instr.op == INVALID_OP) {
 			fprintf(stderr, "Invalid instruction at %u\n", total_instr * 4 - 4);
