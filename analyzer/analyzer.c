@@ -106,6 +106,7 @@ static void print_stat(int freq[NUM_INSTR], int freq_comp[NUM_INSTR], uint32_t t
 		PRINT(SEQZ);
 		PRINT(SNEZ);
 		PRINT(SLTZ);
+		PRINT(LSI);
 	}
 
 	printf("Total instructions: %u\n", total_instr);
@@ -116,98 +117,10 @@ static void print_stat(int freq[NUM_INSTR], int freq_comp[NUM_INSTR], uint32_t t
 static bool is_compressible(struct instr *instr)
 {
 	assert(instr != NULL);
-
-	uint8_t rs = instr->rs;
-	uint8_t rt = instr->rt;
-	uint8_t rd = instr->rd;
-	uint16_t imm = instr->imm;
-	int16_t simm = instr->simm;
-
-	switch(instr->op) {
-	case NOP:
-	case MOV:
-	case CLEAR:
-	case NOT:
-	case NEG:
-	case SEQZ:
-	case SNEZ:
-	case SLTZ:
-	case JR:
-	case JALR:
+	//if (is_compressible_simple(instr) || is_compressible_branch(instr))
+	if (is_compressible_simple(instr))
 		return true;
-
-	case SLL:
-	case SRL:
-	case SRA:
-	case SLLV:
-	case SRLV:
-	case SRAV:
-		if (rd == rt)
-			return true;
-		return false;
-
-	case ADD:
-	case ADDU:
-	case AND:
-	case OR:
-	case XOR:
-	case NOR:
-		if (rd == rs || rd == rt)
-			return true;
-		return false;
-	
-	case SUB:
-	case SUBU:
-	case SLT:
-	case SLTU:
-		if (rd == rs)
-			return true;
-		return false;
-
-	case ADDI:
-	case ADDIU:
-	case ANDI:
-	case ORI:
-	case XORI:
-	case SLTI:
-		if (rs == rt && -16 <= simm && simm <= 15)
-			return true;
-		return false;
-
-	case SLTIU:
-		if (rs == rt && imm < 32)
-			return true;
-		return false;
-
-	case LUI:
-	case BLTZ:
-	case BLTZAL:
-	case BGEZ:
-	case BGEZAL:
-	case BEQZ:
-	case BNEZ:
-		if (-16 <= simm && simm <= 15)
-			return true;
-		return false;
-	
-	case B:
-	case BAL:
-		/* 10 bit immediate */
-		if (-512 <= simm && simm <= 511)
-			return true;
-		return false;
-	
-	case SW:
-	case LW:
-		/* Stack pointer is $29 */
-		if (rs == 29 && imm % 4 == 0 && imm <= 128)
-			return true;
-		return false;
-			
-	
-	default:
-		return false;
-	}
+	return false;
 }
 
 static void update_branch_stat(struct instr *instr)

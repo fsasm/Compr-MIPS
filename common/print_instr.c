@@ -6,14 +6,18 @@
 
 #include "print_instr.h"
 #include <stdio.h>
+#include <stdarg.h>
 
-#define PRINT_R(op) fprintf(stderr, "%s r%d, r%d, r%d\n", op, instr->rd, instr->rs, instr->rt)
-#define PRINT_R2(op) fprintf(stderr, "%s r%d, r%d, r%d\n", op, instr->rd, instr->rt, instr->rs)
-#define PRINT_S(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rd, instr->rt, instr->shamt)
-#define PRINT_I(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->imm)
-#define PRINT_I2(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
-#define PRINT_Is(op) fprintf(stderr, "%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
-#define PRINT_LS(op) fprintf(stderr, "%s r%d, %d(r%d)\n", op, instr->rt, instr->simm, instr->rs)
+#define PRINT(...) fprintf(stderr, __VA_ARGS__)
+#define PRINT_R(op)  PRINT("%s r%d, r%d, r%d\n", op, instr->rd, instr->rs, instr->rt)
+#define PRINT_R2(op)  PRINT("%s r%d, r%d\n", op, instr->rd, instr->rt)
+#define PRINT_R1(op)  PRINT("%s r%d\n", op, instr->rd)
+#define PRINT_R_REV(op) PRINT("%s r%d, r%d, r%d\n", op, instr->rd, instr->rt, instr->rs)
+#define PRINT_S(op)  PRINT("%s r%d, r%d, %d\n", op, instr->rd, instr->rt, instr->shamt)
+#define PRINT_I(op)  PRINT("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->imm)
+#define PRINT_I2(op) PRINT("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
+#define PRINT_Is(op) PRINT("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
+#define PRINT_LS(op) PRINT("%s r%d, %d(r%d)\n", op, instr->rt, instr->simm, instr->rs)
 
 void print_instr(struct instr *instr)
 {
@@ -31,15 +35,15 @@ void print_instr(struct instr *instr)
 		break;
 	
 	case SLLV:
-		PRINT_R2("sllv");
+		PRINT_R_REV("sllv");
 		break;
 
 	case SRLV:
-		PRINT_R2("srlv");
+		PRINT_R_REV("srlv");
 		break;
 
 	case SRAV:
-		PRINT_R2("srav");
+		PRINT_R_REV("srav");
 		break;
 	
 	case ADD:
@@ -95,7 +99,7 @@ void print_instr(struct instr *instr)
 		break;
 
 	case LUI:
-		fprintf(stderr, "lui r%d, 0x%X\n", instr->rt, instr->imm);
+		PRINT("lui r%d, 0x%X\n", instr->rt, instr->imm);
 		break;
 
 	case LB:
@@ -179,22 +183,75 @@ void print_instr(struct instr *instr)
 		break;
 	
 	case J:
-		fprintf(stderr, "j 0x%X\n", instr->addr);
+		PRINT("j 0x%X\n", instr->addr * 4);
 		break;
 	
 	case JAL:
-		fprintf(stderr, "jal 0x%X\n", instr->addr);
+		PRINT("jal 0x%X\n", instr->addr * 4);
 		break;
 	
 	case JR:
-		fprintf(stderr, "jr r%d\n", instr->rs);
+		PRINT("jr r%d\n", instr->rs);
 		break;
 	
 	case JALR:
-		fprintf(stderr, "jalr r%d, r%d\n", instr->rd, instr->rs);
+		PRINT("jalr r%d, r%d\n", instr->rd, instr->rs);
+		break;
+
+	/* pseudo instructions */
+	case NOP:
+		PRINT("nop\n");
+		break;
+	
+	case MOV:
+		PRINT_R2("mov");
+		break;
+	
+	case CLEAR:
+		PRINT_R1("clear");
+		break;
+
+	case NOT:
+		PRINT_R2("not");
+		break;
+
+	case NEG:
+		PRINT_R2("neg");
+		break;
+
+	case B:
+		PRINT("b %d\n", instr->simm);
+		break;
+
+	case BAL:
+		PRINT("bal %d\n", instr->simm);
+		break;
+	
+	case BEQZ:
+		PRINT("beqz r%d, %d\n", instr->rs, instr->simm);
+		break;
+
+	case BNEZ:
+		PRINT("bnez r%d, %d\n", instr->rs, instr->simm);
+		break;
+
+	case SEQZ:
+		PRINT("seqz r%d, r%d\n", instr->rd, instr->rt);
+		break;
+
+	case SNEZ:
+		PRINT("snez r%d, r%d\n", instr->rd, instr->rt);
+		break;
+
+	case SLTZ:
+		PRINT("sltz r%d, r%d\n", instr->rd, instr->rt);
+		break;
+
+	case LSI:
+		PRINT("lsi r%d, %d\n", instr->rd, instr->simm);
 		break;
 
 	default:
-		fprintf(stderr, "unkown op\n");
+		fprintf(stderr, "unknown op\n");
 	}
 }

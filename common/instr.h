@@ -5,6 +5,7 @@
  */
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifndef INSTR_H
 #define INSTR_H
@@ -82,6 +83,7 @@ enum operation {
 	SEQZ,
 	SNEZ,
 	SLTZ,
+	LSI, /* load small immediate */
 
 	NUM_INSTR,
 	INVALID_OP
@@ -98,15 +100,12 @@ struct instr {
 	uint32_t addr;
 };
 
-enum pseudo_level {
-	PSEUDO_LEVEL_NONE,
-	PSEUDO_LEVEL_SIMPLE,
-	PSEUDO_LEVEL_EXTENDED
-};
-
 void parse_instr(uint32_t instr, struct instr *out);
 void conv_pseudo(struct instr *out);
-void conv_pseudo2(struct instr *out, enum pseudo_level level);
+
+bool is_branch(enum operation op);
+
+bool is_compressible_simple(struct instr *instr);
 
 #endif
 

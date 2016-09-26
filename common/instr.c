@@ -334,6 +334,7 @@ void conv_pseudo(struct instr *out)
 	uint8_t rd = out->rd;
 	uint8_t shamt = out->shamt;
 	uint16_t imm = out->imm;
+	int16_t simm = out->simm;
 
 	switch (out->op) {
 	case SLL:
@@ -392,16 +393,6 @@ void conv_pseudo(struct instr *out)
 		}
 		break;
 
-	case ADD:
-		if (rd == 0) {
-			out->op = NOP; /* this still could generate an overflow exception. */
-		} else if (rs == 0 && rt == 0) {
-			out->op = CLEAR;
-		} else if (rs == 0 || rs == 0) {
-			out->op = MOV;
-		}
-		break;
-
 	case ADDU:
 		if (rd == 0) {
 			out->op = NOP;
@@ -409,19 +400,9 @@ void conv_pseudo(struct instr *out)
 			out->op = CLEAR;
 		} else if (rs == 0 || rs == 0) {
 			out->op = MOV;
-		}
-		break;
-
-	case SUB:
-		if (rd == 0) {
-			out->op = NOP;
-		} else if (rs == 0 && rt == 0) {
-			out->op = CLEAR;
-		} else if (rs == 0) {
-			/* In this case a negation can trigger a overflow exception. */
-			out->op = NEG;
-		} else if (rt == 0) {
-			out->op = MOV;
+			if (rt == 0) {
+				out->rt = rs;
+			}
 		}
 		break;
 
@@ -434,6 +415,7 @@ void conv_pseudo(struct instr *out)
 			out->op = NEG;
 		} else if (rt == 0) {
 			out->op = MOV;
+			out->rt = rs;
 		}
 		break;
 
@@ -452,6 +434,9 @@ void conv_pseudo(struct instr *out)
 			out->op = CLEAR;
 		} else if (rs == 0 || rt == 0) {
 			out->op = MOV;
+			if (rt == 0) {
+				out->rt = rs;
+			}
 		}
 		break;
 
@@ -462,6 +447,9 @@ void conv_pseudo(struct instr *out)
 			out->op = CLEAR;
 		} else if (rs == 0 || rt == 0) {
 			out->op = MOV;
+			if (rt == 0) {
+				out->rt = rs;
+			}
 		}
 		break;
 
@@ -470,16 +458,9 @@ void conv_pseudo(struct instr *out)
 			out->op = NOP;
 		} else if ((rs == 0 && rt != 0) || (rs != 0 && rt == 0)) {
 			out->op = NOT;
-		}
-		break;
-
-	case ADDI:
-		if (rt == 0) {
-			out->op = NOP;
-		} else if (rs == 0 && imm == 0) {
-			out->op = CLEAR;
-		} else if (imm == 0) {
-			out->op = MOV;
+			if (rt == 0) {
+				out->rt = rs;
+			}
 		}
 		break;
 
@@ -488,8 +469,14 @@ void conv_pseudo(struct instr *out)
 			out->op = NOP;
 		} else if (rs == 0 && imm == 0) {
 			out->op = CLEAR;
+			out->rd = rt;
 		} else if (imm == 0) {
 			out->op = MOV;
+			out->rd = rt;
+			out->rt = rs;
+		} else if (rs == 0 && -16 <= simm && simm <= 15) {
+			out->op = LSI;
+			out->rd = rt;
 		}
 		break;
 
@@ -498,6 +485,7 @@ void conv_pseudo(struct instr *out)
 			out->op = NOP;
 		} else if (rs == 0 || imm == 0) {
 			out->op = CLEAR;
+			out->rd = rt;
 		}
 		break;
 
@@ -506,8 +494,11 @@ void conv_pseudo(struct instr *out)
 			out->op = NOP;
 		} else if (rs == 0 && imm == 0) {
 			out->op = CLEAR;
+			out->rd = rt;
 		} else if (imm == 0) {
 			out->op = MOV;
+			out->rd = rt;
+			out->rt = rs;
 		}
 		break;
 
@@ -516,32 +507,48 @@ void conv_pseudo(struct instr *out)
 			out->op = NOP;
 		} else if (rs == 0 && imm == 0) {
 			out->op = CLEAR;
+			out->rd = rt;
 		} else if (imm == 0) {
 			out->op = MOV;
+			out->rd = rt;
+			out->rt = rs;
+		}
+		break;
+
+	case LUI:
+		if (imm == 0) {
+			out->op = CLEAR;
+			out->rd = rt;
 		}
 		break;
 
 	case SLT:
 		if (rt == 0) {
 			out->op = SLTZ;
+			out->rt = rs;
 		}
 		break;
 	
 	case SLTU:
 		if (rs == 0) {
 			out->op = SNEZ;
+			out->rt = rs;
 		}
 		break;
 	
 	case SLTI:
 		if (out->simm == 0) {
 			out->op = SLTZ;
+			out->rd = rt;
+			out->rt = rs;
 		}
 		break;
 
 	case SLTIU:
 		if (imm == 1) {
 			out->op = SEQZ;
+			out->rd = rt;
+			out->rt = rs;
 		}
 		break;
 	
@@ -562,12 +569,18 @@ void conv_pseudo(struct instr *out)
 			out->op = B;
 		} else if (rs == 0 || rt == 0) {
 			out->op = BEQZ;
+			if (rs == 0) {
+				out->rs = rt;
+			}
 		}
 		break;
 
 	case BNE:
 		if ((rs == 0 && rt != 0) || (rs != 0 && rt == 0)) {
 			out->op = BNEZ;
+			if (rs == 0) {
+				out->rs = rt;
+			}
 		}
 		break;
 
@@ -588,3 +601,91 @@ void conv_pseudo(struct instr *out)
 		/* ignore */
 	}
 }
+
+bool is_branch(enum operation op)
+{
+	switch(op) {
+		case BLTZ:
+		case BGEZ:
+		case BLTZAL:
+		case BGEZAL:
+		case BEQ:
+		case BNE:
+		case BLEZ:
+		case BGTZ:
+		case B:
+		case BAL: 
+		case BEQZ:
+		case BNEZ:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
+bool is_compressible_simple(struct instr *instr)
+{
+	assert(instr != NULL);
+
+	uint8_t rs = instr->rs;
+	uint8_t rt = instr->rt;
+	uint8_t rd = instr->rd;
+	uint16_t imm = instr->imm;
+	int16_t simm = instr->simm;
+
+	switch(instr->op) {
+	case NOP:
+	case MOV:
+	case CLEAR:
+	case NOT:
+	case NEG:
+	case LSI:
+	case JR:
+	case JALR:
+		return true;
+
+	case SLL:
+	case SRL:
+	case SRA:
+		if (rd == rt)
+			return true;
+		return false;
+
+	case ADDU:
+	case AND:
+	case OR:
+	case XOR:
+		if (rd == rs || rd == rt)
+			return true;
+		return false;
+	
+	case SUBU:
+	case SLTU:
+		if (rd == rs)
+			return true;
+		return false;
+
+	case ADDIU:
+	case ANDI:
+		if (rs == rt && -16 <= simm && simm <= 15)
+			return true;
+		return false;
+
+	case LUI:
+		if (-16 <= simm && simm <= 15)
+			return true;
+		return false;
+	
+	case SW:
+	case LW:
+		/* Stack pointer is $29 */
+		if (rs == 29 && imm % 4 == 0 && imm <= 128)
+			return true;
+		return false;
+	
+	default:
+		return false;
+	}
+}
+
