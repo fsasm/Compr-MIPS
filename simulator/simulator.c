@@ -515,60 +515,60 @@ void simulator_run(struct simulator *sim, uint64_t num_steps)
 
 		case BLTZ:
 			if (rs >= 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case BGEZ:
 			if (rs < 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case BLTZAL:
 			sim->reg[31] = sim->cur_pc + 4;
 			if (rs >= 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case BGEZAL:
 			sim->reg[31] = sim->cur_pc + 4;
 			if (rs < 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case BEQ:
 			if (rs == rt) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case BNE:
 			if (rs != rt) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case BLEZ:
 			if (rs >= 0x80000000 || rs == 0) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case BGTZ:
 			if (rs < 0x80000000 && rs > 0) {
-				sim->next_pc = sim->cur_pc + simm * 4;
+				sim->next_pc = sim->cur_pc + simm;
 			}
 			break;
 
 		case J:
-			sim->next_pc = (sim->cur_pc & 0xF0000000) | ((instr.addr * 4) & 0x0FFFFFFF);
+			sim->next_pc = (sim->cur_pc & 0xF0000000) | (instr.addr & 0x0FFFFFFF);
 			break;
 
 		case JAL:
-			sim->next_pc = (sim->cur_pc & 0xF0000000) | ((instr.addr * 4) & 0x0FFFFFFF);
+			sim->next_pc = (sim->cur_pc & 0xF0000000) | (instr.addr & 0x0FFFFFFF);
 			sim->reg[31] = sim->cur_pc + 4;
 			break;
 
@@ -578,7 +578,7 @@ void simulator_run(struct simulator *sim, uint64_t num_steps)
 
 		case JALR:
 			sim->next_pc = rs;
-			sim->reg[31] = sim->cur_pc + 4;
+			sim->reg[instr.rd] = sim->cur_pc + 4;
 			break;
 
 		default:

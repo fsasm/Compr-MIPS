@@ -215,6 +215,7 @@ void parse_instr(uint32_t instr, struct instr *out)
 	out->imm  = get_imm(instr);
 	out->simm = get_simm(instr);
 	out->addr = get_addr(instr);
+	out->compressed = false;
 
 	uint8_t opcode = get_opcode(instr);
 
@@ -224,30 +225,37 @@ void parse_instr(uint32_t instr, struct instr *out)
 		break;
 
 	case 0x01:
+		out->simm *= 4;
 		out->op = parse_branches(instr);
 		break;
 	
 	case 0x02: /* J */
+		out->addr *= 4;
 		out->op = J;
 		break;
 
 	case 0x03: /* JAL */
+		out->addr *= 4;
 		out->op = JAL;
 		break;
 
 	case 0x04: /* BEQ */
+		out->simm *= 4;
 		out->op = BEQ;
 		break;
 
 	case 0x05: /* BNE */
+		out->simm *= 4;
 		out->op = BNE;
 		break;
 
 	case 0x06: /* BLEZ */
+		out->simm *= 4;
 		out->op = BLEZ;
 		break;
 
 	case 0x07: /* BGTZ */
+		out->simm *= 4;
 		out->op = BGTZ;
 		break;
 

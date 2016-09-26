@@ -95,9 +95,10 @@ struct instr {
 	uint8_t rt;
 	uint8_t rd;
 	uint8_t shamt;
-	uint16_t imm;
-	int16_t simm;
+	uint32_t imm;
+	int32_t simm;
 	uint32_t addr;
+	bool compressed;
 };
 
 void parse_instr(uint32_t instr, struct instr *out);
