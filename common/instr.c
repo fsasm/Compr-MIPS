@@ -476,10 +476,10 @@ void conv_to_pseudo(struct instr *out)
 	case ADDIU:
 		if (rt == 0) {
 			out->op = NOP;
-		} else if (rs == 0 && imm == 0) {
+		} else if (rs == 0 && simm == 0) {
 			out->op = CLEAR;
 			out->rd = rt;
-		} else if (imm == 0) {
+		} else if (simm == 0) {
 			out->op = MOV;
 			out->rd = rt;
 			out->rt = rs;

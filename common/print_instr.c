@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define PRINT(...) fprintf(stderr, __VA_ARGS__)
+#define PRINT(...) fprintf(stdout, __VA_ARGS__)
 #define PRINT_R(op)  PRINT("%s r%d, r%d, r%d\n", op, instr->rd, instr->rs, instr->rt)
 #define PRINT_R2(op)  PRINT("%s r%d, r%d\n", op, instr->rd, instr->rt)
 #define PRINT_R1(op)  PRINT("%s r%d\n", op, instr->rd)
@@ -183,11 +183,11 @@ void print_instr(struct instr *instr)
 		break;
 	
 	case J:
-		PRINT("j 0x%X\n", instr->addr * 4);
+		PRINT("j 0x%X\n", instr->addr);
 		break;
 	
 	case JAL:
-		PRINT("jal 0x%X\n", instr->addr * 4);
+		PRINT("jal 0x%X\n", instr->addr);
 		break;
 	
 	case JR:
