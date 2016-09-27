@@ -846,183 +846,183 @@ uint32_t write_instr(struct instr *instr)
 	switch(instr->op) {
 	/* ALU */
 	case SLL:
-		write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x00);
+		return write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x00);
 		break;
 
 	case SRL:
-		write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x02);
+		return write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x02);
 		break;
 
 	case SRA:
-		write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x03);
+		return write_r(0x00, 0x00, instr->rt, instr->rd, instr->shamt, 0x03);
 		break;
 
 	case SLLV:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x04);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x04);
 		break;
 
 	case SRLV:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x06);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x06);
 		break;
 
 	case SRAV:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x07);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x07);
 		break;
 
 	case ADD:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x20);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x20);
 		break;
 
 	case ADDU:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x21);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x21);
 		break;
 
 	case SUB:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x22);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x22);
 		break;
 
 	case SUBU:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x23);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x23);
 		break;
 
 	case AND:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x24);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x24);
 		break;
 		
 	case OR:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x25);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x25);
 		break;
 		
 	case XOR:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x26);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x26);
 		break;
 		
 	case NOR:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x27);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x27);
 		break;
 
 	/* ALU imm */
 	case ADDI:
-		write_si(0x08, instr->rs, instr->rt, instr->simm);
+		return write_si(0x08, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case ADDIU:
-		write_si(0x09, instr->rs, instr->rt, instr->simm);
+		return write_si(0x09, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case ANDI:
-		write_ui(0x0C, instr->rs, instr->rt, instr->imm);
+		return write_ui(0x0C, instr->rs, instr->rt, instr->imm);
 		break;
 
 	case ORI:
-		write_ui(0x0D, instr->rs, instr->rt, instr->imm);
+		return write_ui(0x0D, instr->rs, instr->rt, instr->imm);
 		break;
 
 	case XORI:
-		write_ui(0x0E, instr->rs, instr->rt, instr->imm);
+		return write_ui(0x0E, instr->rs, instr->rt, instr->imm);
 		break;
 
 	case LUI:
-		write_ui(0x0F, 0x00, instr->rt, instr->imm);
+		return write_ui(0x0F, 0x00, instr->rt, instr->imm);
 		break;
 
 	/* load & store */
 	case LB:
-		write_si(0x20, instr->rs, instr->rt, instr->simm);
+		return write_si(0x20, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case LH:
-		write_si(0x21, instr->rs, instr->rt, instr->simm);
+		return write_si(0x21, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case LW:
-		write_si(0x23, instr->rs, instr->rt, instr->simm);
+		return write_si(0x23, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case LBU:
-		write_si(0x24, instr->rs, instr->rt, instr->simm);
+		return write_si(0x24, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case LHU:
-		write_si(0x25, instr->rs, instr->rt, instr->simm);
+		return write_si(0x25, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case SB:
-		write_si(0x28, instr->rs, instr->rt, instr->simm);
+		return write_si(0x28, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case SH:
-		write_si(0x29, instr->rs, instr->rt, instr->simm);
+		return write_si(0x29, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case SW:
-		write_si(0x2B, instr->rs, instr->rt, instr->simm);
+		return write_si(0x2B, instr->rs, instr->rt, instr->simm);
 		break;
 
 	/* compare */
 	case SLT:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x2A);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x2A);
 		break;
 
 	case SLTU:
-		write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x2B);
+		return write_r(0x00, instr->rs, instr->rt, instr->rd, 0x00, 0x2B);
 		break;
 
 	case SLTI:
-		write_si(0x0A, instr->rs, instr->rt, instr->simm);
+		return write_si(0x0A, instr->rs, instr->rt, instr->simm);
 		break;
 
 	case SLTIU:
-		write_si(0x0B, instr->rs, instr->rt, instr->simm);
+		return write_si(0x0B, instr->rs, instr->rt, instr->simm);
 		break;
 
 	/* branches */
 	case BLTZ:
-		write_si(0x01, instr->rs, 0x00, instr->simm / 4);
+		return write_si(0x01, instr->rs, 0x00, instr->simm / 4);
 		break;
 
 	case BGEZ:
-		write_si(0x01, instr->rs, 0x01, instr->simm / 4);
+		return write_si(0x01, instr->rs, 0x01, instr->simm / 4);
 		break;
 
 	case BLTZAL:
-		write_si(0x01, instr->rs, 0x10, instr->simm / 4);
+		return write_si(0x01, instr->rs, 0x10, instr->simm / 4);
 		break;
 
 	case BGEZAL:
-		write_si(0x01, instr->rs, 0x11, instr->simm / 4);
+		return write_si(0x01, instr->rs, 0x11, instr->simm / 4);
 		break;
 
 	case BEQ:
-		write_si(0x04, instr->rs, instr->rt, instr->simm / 4);
+		return write_si(0x04, instr->rs, instr->rt, instr->simm / 4);
 		break;
 
 	case BNE:
-		write_si(0x05, instr->rs, instr->rt, instr->simm / 4);
+		return write_si(0x05, instr->rs, instr->rt, instr->simm / 4);
 		break;
 
 	case BLEZ:
-		write_si(0x06, instr->rs, 0x00, instr->simm / 4);
+		return write_si(0x06, instr->rs, 0x00, instr->simm / 4);
 		break;
 
 	case BGTZ:
-		write_si(0x07, instr->rs, 0x00, instr->simm / 4);
+		return write_si(0x07, instr->rs, 0x00, instr->simm / 4);
 		break;
 
 	case J:
-		write_j(0x02, instr->addr / 4);
+		return write_j(0x02, instr->addr / 4);
 		break;
 
 	case JAL:
-		write_j(0x03, instr->addr / 4);
+		return write_j(0x03, instr->addr / 4);
 		break;
 
 	case JR:
-		write_r(0x00, instr->rs, 0x00, 0x00, 0x00, 0x08);
+		return write_r(0x00, instr->rs, 0x00, 0x00, 0x00, 0x08);
 		break;
 
 	case JALR:
-		write_r(0x00, instr->rs, 0x00, instr->rd, 0x00, 0x09);
+		return write_r(0x00, instr->rs, 0x00, instr->rd, 0x00, 0x09);
 		break;
 
 	default:

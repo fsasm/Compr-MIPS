@@ -46,7 +46,7 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 		 */
 		uint8_t opcode = instr >> 26;
 		out->rs = (instr >> 21) & 0x1F;
-		out->rt = (instr >> 15) & 0x1F;
+		out->rt = (instr >> 16) & 0x1F;
 		out->compressed = false;
 
 		uint16_t imm = instr & 0xFFFF;
@@ -118,35 +118,35 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 			out->op = BGTZ;
 			break;
 	
-		case 0x18: /* LB */
+		case 0x10: /* LB */
 			out->op = LB;
 			break;
 
-		case 0x19: /* LH */
+		case 0x11: /* LH */
 			out->op = LH;
 			break;
 
-		case 0x1A: /* LW */
+		case 0x13: /* LW */
 			out->op = LW;
 			break;
 
-		case 0x1B: /* LBU */
+		case 0x14: /* LBU */
 			out->op = LBU;
 			break;
 
-		case 0x1C: /* LHU */
+		case 0x15: /* LHU */
 			out->op = LHU;
 			break;
 
-		case 0x1D: /* SB */
+		case 0x18: /* SB */
 			out->op = SB;
 			break;
 
-		case 0x1E: /* SH */
+		case 0x19: /* SH */
 			out->op = SH;
 			break;
 
-		case 0x1F: /* SW */
+		case 0x1B: /* SW */
 			out->op = SW;
 			break;
 
@@ -378,6 +378,7 @@ static uint32_t write_si(uint8_t opcode, uint8_t rds, int8_t simm)
 	} else {
 		imm = simm;
 	}
+	imm &= 0x1F;
 
 	uint16_t instr = 1;
 	instr = (instr << 5) | opcode;
@@ -408,7 +409,7 @@ static uint32_t write_b(uint8_t opcode, int16_t offset)
 
 static uint32_t write_l_si(uint8_t opcode, uint8_t rs, uint8_t rt, int16_t simm)
 {
-	assert(opcode < 64);
+	assert(opcode < 32);
 	assert(rs < 32);
 	assert(rt < 32);
 
@@ -430,7 +431,7 @@ static uint32_t write_l_si(uint8_t opcode, uint8_t rs, uint8_t rt, int16_t simm)
 
 static uint32_t write_l_j(uint8_t opcode, uint32_t target)
 {
-	assert(opcode < 64);
+	assert(opcode < 32);
 	assert(target < 0x4000000);
 	uint32_t instr = opcode;
 	instr = (instr << 26) | target;
@@ -451,35 +452,35 @@ int write_instr_v2(struct instr *instr, uint32_t *out)
 
 		switch(inst.op) {
 		case LB:
-			*out = write_l_si(0x20, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x10, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case LH:
-			*out = write_l_si(0x21, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x11, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case LW:
-			*out = write_l_si(0x23, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x13, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case LBU:
-			*out = write_l_si(0x24, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x14, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case LHU:
-			*out = write_l_si(0x25, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x15, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case SB:
-			*out = write_l_si(0x28, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x18, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case SH:
-			*out = write_l_si(0x29, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x19, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case SW:
-			*out = write_l_si(0x2B, inst.rs, inst.rt, inst.simm);
+			*out = write_l_si(0x1B, inst.rs, inst.rt, inst.simm);
 			break;
 
 		case BLTZ:
@@ -571,11 +572,11 @@ int write_instr_v2(struct instr *instr, uint32_t *out)
 		break;
 
 	case ADDIU:
-		*out = write_si(C_ADDIU, instr->rd, instr->simm);
+		*out = write_si(C_ADDIU, instr->rt, instr->simm);
 		break;
 
 	case ANDI:
-		*out = write_ui(C_ANDI, instr->rd, instr->imm);
+		*out = write_ui(C_ANDI, instr->rt, instr->imm);
 		break;
 
 	case SLL:
@@ -591,7 +592,7 @@ int write_instr_v2(struct instr *instr, uint32_t *out)
 		break;
 
 	case LSI:
-		*out = write_si(C_LSI, instr->rd, instr->simm);
+		*out = write_si(C_LSI, instr->rt, instr->simm);
 		break;
 
 	case B:
