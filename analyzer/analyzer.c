@@ -11,7 +11,12 @@
 #include <assert.h>
 #include <string.h>
 
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
 #include "../common/instr.h"
+#include "../common/v2_instr.h"
 #include "imm_list.h"
 
 static char *program_name = "analyzer";
@@ -20,11 +25,20 @@ static struct imm_list branch_list;
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s FILE\n", program_name);
+	fprintf(stderr, "Usage: %s [-c] [-p] FILE\n", program_name);
+	fprintf(stderr, "\t-c\tUse the compressed instruction format\n");
+	fprintf(stderr, "\t-p\tConvert to pseudo instructions\n");
 	exit(EXIT_FAILURE);
 }
 
-static uint32_t to_instr(uint8_t bytes[4])
+static uint16_t to_instr2(uint8_t bytes[2])
+{
+	uint16_t instr = bytes[0];
+	instr = (instr << 8) | bytes[1];
+	return instr;
+}
+
+static uint32_t to_instr4(uint8_t bytes[4])
 {
 	uint32_t instr = bytes[0];
 	instr = (instr << 8) | bytes[1];
@@ -263,7 +277,7 @@ static int cmp_mem_stat(const void *left, const void *right)
 }
 
 
-static void analyze2(FILE *in, bool psd)
+static void analyze2(FILE *in, bool psd, bool v2)
 {
 	uint8_t bytes[4];
 	int freq[NUM_INSTR] = {0};
@@ -274,24 +288,56 @@ static void analyze2(FILE *in, bool psd)
 
 	imm_list_init(&branch_list);
 
-	while(fread(bytes, sizeof(bytes), 1, in) == 1) {
-		uint32_t code = to_instr(bytes);
-		total_instr++;
-		parse_instr(code, &instr);
-		if (psd)
-			conv_to_pseudo(&instr);
+	if (v2) {
+		while(fread(bytes, 2, 1, in) == 1) {
+			uint32_t code = to_instr2(bytes);
+			code <<= 16;
 
-		if (instr.op == INVALID_OP) {
-			fprintf(stderr, "Invalid instruction at %u\n", total_instr * 4 - 4);
-			continue;
+			if (code < 0x80000000) {
+				/* long instruction */
+				fread(bytes, 2, 1, in);
+				code |= to_instr2(bytes);
+			}
+
+			total_instr++;
+			memset(&instr, 0, sizeof(instr));
+			parse_instr_v2(code, &instr);
+
+			if (psd)
+				conv_to_pseudo(&instr);
+
+			if (instr.op == INVALID_OP) {
+				fprintf(stderr, "Invalid instruction at %u\n", total_instr * 4 - 4);
+				continue;
+			}
+
+			freq[instr.op]++;
+			if (is_compressible(&instr))
+				freq_comp[instr.op]++;
+
+			update_branch_stat(&instr);
+			update_mem_stat(&instr);
 		}
+	} else {
+		while(fread(bytes, sizeof(bytes), 1, in) == 1) {
+			uint32_t code = to_instr4(bytes);
+			total_instr++;
+			parse_instr(code, &instr);
+			if (psd)
+				conv_to_pseudo(&instr);
 
-		freq[instr.op]++;
-		if (is_compressible(&instr))
-			freq_comp[instr.op]++;
+			if (instr.op == INVALID_OP) {
+				fprintf(stderr, "Invalid instruction at %u\n", total_instr * 4 - 4);
+				continue;
+			}
 
-		update_branch_stat(&instr);
-		update_mem_stat(&instr);
+			freq[instr.op]++;
+			if (is_compressible(&instr))
+				freq_comp[instr.op]++;
+
+			update_branch_stat(&instr);
+			update_mem_stat(&instr);
+		}
 	}
 
 	print_stat(freq, freq_comp, total_instr, psd);
@@ -329,11 +375,34 @@ int main(int argc, char *argv[])
 {
 	if (argc > 0)
 		program_name = argv[0];
-	
-	if (argc != 2)
+
+	bool v2 = false;
+	bool pseudo = false;
+
+	int opt = 0;
+
+	while ((opt = getopt(argc, argv, "cp")) != -1) {
+		switch (opt) {
+		case 'c':
+			v2 = true;
+			break;
+
+		case 'p':
+			pseudo = true;
+			break;
+
+		case '?':
+		default:
+			usage();
+		}
+	}
+
+	if (optind >= argc) {
+		fprintf(stderr, "missing binary file\n");
 		usage();
+	}
 	
-	FILE *file = fopen(argv[1], "rb");
+	FILE *file = fopen(argv[optind], "rb");
 	if (file == NULL) {
 		fprintf(stderr, "Couldn't open file '%s'\n", argv[1]);
 		exit(EXIT_FAILURE);
@@ -343,7 +412,7 @@ int main(int argc, char *argv[])
 	analyze2(file, false);
 	rewind(file);
 	printf("With pseudo instructions:\n");*/
-	analyze2(file, true);
+	analyze2(file, pseudo, v2);
 
 	fclose(file);
 
