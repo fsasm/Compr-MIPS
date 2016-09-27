@@ -25,9 +25,10 @@ static struct imm_list branch_list;
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s [-c] [-p] FILE\n", program_name);
+	fprintf(stderr, "Usage: %s [-c] [-p] [-b] FILE\n", program_name);
 	fprintf(stderr, "\t-c\tUse the compressed instruction format\n");
 	fprintf(stderr, "\t-p\tConvert to pseudo instructions\n");
+	fprintf(stderr, "\t-b\tShow statistics about branch offsets\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -277,7 +278,7 @@ static int cmp_mem_stat(const void *left, const void *right)
 }
 
 
-static void analyze2(FILE *in, bool psd, bool v2)
+static void analyze2(FILE *in, bool psd, bool v2, bool branch_stat, bool show_mem_stat)
 {
 	uint8_t bytes[4];
 	int freq[NUM_INSTR] = {0};
@@ -354,20 +355,24 @@ static void analyze2(FILE *in, bool psd, bool v2)
 	printf("Estimated comp size: %u bytes\n", comp_size);
 	printf("Estimated comp ratio: %5.2f%%\n", (100.0 * comp_size) / uncomp_size);
 
-	printf("All branch distances:\n");
-	imm_list_sort_signed(&branch_list);
-	struct imm_entry *branch_entries = branch_list.entries;
-	for (size_t i = 0; i < branch_list.num_entries; i++) {
-		printf("%3u x %5i\n", branch_entries[i].num, branch_entries[i].simm);
+	if (branch_stat) {
+		printf("All branch distances:\n");
+		imm_list_sort_signed(&branch_list);
+		struct imm_entry *branch_entries = branch_list.entries;
+		for (size_t i = 0; i < branch_list.num_entries; i++) {
+			printf("%3u x %5i\n", branch_entries[i].num, branch_entries[i].simm);
+		}
 	}
 
-	qsort(mem_stat, num_mem_stat_entries, sizeof(struct mem_stat), cmp_mem_stat);
-	printf("All stack mem_op offsets:\n");
-	printf("offset   W   H  HU   B  BU\n");
-	for (size_t i = 0; i < num_mem_stat_entries; i++) {
-		printf("%5i: %3u %3u %3u %3u %3u\n", mem_stat[i].imm, mem_stat[i].w_count,
-			mem_stat[i].h_count, mem_stat[i].hu_count, mem_stat[i].b_count,
-			mem_stat[i].bu_count);
+	if (show_mem_stat) {
+		qsort(mem_stat, num_mem_stat_entries, sizeof(struct mem_stat), cmp_mem_stat);
+		printf("All stack mem_op offsets:\n");
+		printf("offset   W   H  HU   B  BU\n");
+		for (size_t i = 0; i < num_mem_stat_entries; i++) {
+			printf("%5i: %3u %3u %3u %3u %3u\n", mem_stat[i].imm, mem_stat[i].w_count,
+				mem_stat[i].h_count, mem_stat[i].hu_count, mem_stat[i].b_count,
+				mem_stat[i].bu_count);
+		}
 	}
 }
 
@@ -378,13 +383,23 @@ int main(int argc, char *argv[])
 
 	bool v2 = false;
 	bool pseudo = false;
+	bool branch_stat = false;
+	bool show_mem_stat = false;
 
 	int opt = 0;
 
-	while ((opt = getopt(argc, argv, "cp")) != -1) {
+	while ((opt = getopt(argc, argv, "mcbp")) != -1) {
 		switch (opt) {
 		case 'c':
 			v2 = true;
+			break;
+
+		case 'b':
+			branch_stat = true;
+			break;
+
+		case 'm':
+			show_mem_stat = true;
 			break;
 
 		case 'p':
@@ -412,7 +427,7 @@ int main(int argc, char *argv[])
 	analyze2(file, false);
 	rewind(file);
 	printf("With pseudo instructions:\n");*/
-	analyze2(file, pseudo, v2);
+	analyze2(file, pseudo, v2, branch_stat, show_mem_stat);
 
 	fclose(file);
 
