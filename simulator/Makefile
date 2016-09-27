@@ -12,6 +12,6 @@ all: simulator
 clean:
 	rm -f simulator
 
-simulator: simulator.c ../common/instr.c ../common/print_instr.c
+simulator: simulator.c ../common/instr.c ../common/v2_instr.c ../common/print_instr.c
 	$(CC) $(CFLAGS) -o $@ $^
 

@@ -662,7 +662,6 @@ bool is_compressible_simple(struct instr *instr)
 		return false;
 
 	case ADDU:
-	case AND:
 	case OR:
 	case XOR:
 		if (rd == rs || rd == rt)
@@ -681,10 +680,12 @@ bool is_compressible_simple(struct instr *instr)
 			return true;
 		return false;
 
+		/*
 	case LUI:
 		if (-16 <= simm && simm <= 15)
 			return true;
 		return false;
+		*/
 	
 	case SW:
 	case LW:

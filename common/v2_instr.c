@@ -319,6 +319,7 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 			out->rs = 29;
 			out->rt = rds;
 			out->simm = uimm * 4;
+			out->imm = uimm * 4;
 			break;
 
 		case C_SWS:
@@ -326,6 +327,7 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 			out->rs = 29;
 			out->rt = rds;
 			out->simm = uimm * 4;
+			out->imm = uimm * 4;
 			break;
 
 		default:
@@ -544,7 +546,11 @@ int write_instr_v2(struct instr *instr, uint32_t *out)
 		break;
 
 	case ADDU:
-		*out = write_r(C_ADDU, instr->rd, instr->rt);
+		if (instr->rd == instr->rs) {
+			*out = write_r(C_ADDU, instr->rd, instr->rt);
+		} else {
+			*out = write_r(C_ADDU, instr->rd, instr->rs);
+		}
 		break;
 
 	case SUBU:
@@ -552,11 +558,19 @@ int write_instr_v2(struct instr *instr, uint32_t *out)
 		break;
 
 	case OR:
-		*out = write_r(C_OR, instr->rd, instr->rt);
+		if (instr->rd == instr->rs) {
+			*out = write_r(C_OR, instr->rd, instr->rt);
+		} else {
+			*out = write_r(C_OR, instr->rd, instr->rs);
+		}
 		break;
 
 	case XOR:
-		*out = write_r(C_XOR, instr->rd, instr->rt);
+		if (instr->rd == instr->rs) {
+			*out = write_r(C_XOR, instr->rd, instr->rt);
+		} else {
+			*out = write_r(C_XOR, instr->rd, instr->rs);
+		}
 		break;
 
 	case NEG:
@@ -620,15 +634,15 @@ int write_instr_v2(struct instr *instr, uint32_t *out)
 		break;
 
 	case SW:
-		*out = write_ui(C_SWS, instr->rd, instr->imm / 4);
+		*out = write_ui(C_SWS, instr->rt, instr->imm / 4);
 		break;
 
 	case LW:
-		*out = write_ui(C_LWS, instr->rd, instr->imm / 4);
+		*out = write_ui(C_LWS, instr->rt, instr->imm / 4);
 		break;
 
 	default:
-		fprintf(stderr, "Invalid compressed instruction\n");
+		fprintf(stderr, "Invalid compressed instruction (%d)\n", instr->op);
 		exit(EXIT_FAILURE);
 		break;
 	}

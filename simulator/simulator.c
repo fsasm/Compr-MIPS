@@ -18,6 +18,7 @@
 #include <sys/stat.h>
 
 #include "../common/instr.h"
+#include "../common/v2_instr.h"
 #include "../common/print_instr.h"
 
 #define PC_START (0x40000000)
@@ -30,10 +31,11 @@ static bool debug = false;
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s [-i IMEM_SIZE] [-d DMEM_SIZE] [-c CYCLES] BIN-FILE [DATA-FILE]\n", program_name);
-	fprintf(stderr, "\t-i\t Size in kiB of the instruction memory\n");
-	fprintf(stderr, "\t-d\t Size in kiB of the data memory\n");
-	fprintf(stderr, "\t-c\t Number of cycles to execute. Default: %d\n", DEFAULT_NUM_CYCLES);
+	fprintf(stderr, "Usage: %s [-i IMEM_SIZE] [-d DMEM_SIZE] [-n CYCLES] [-c] BIN-FILE [DATA-FILE]\n", program_name);
+	fprintf(stderr, "\t-i\tSize in kiB of the instruction memory\n");
+	fprintf(stderr, "\t-d\tSize in kiB of the data memory\n");
+	fprintf(stderr, "\t-n\tNumber of cycles to execute. Default: %d\n", DEFAULT_NUM_CYCLES);
+	fprintf(stderr, "\t-c\tUse compressed instruction format\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -93,6 +95,12 @@ uint32_t u8to32(const uint8_t from[4]) {
 	return to;
 }
 
+uint16_t u8to16(const uint8_t from[2]) {
+	uint32_t to = from[0];
+	to = (to << 8) | from[1];
+	return to;
+}
+
 void load_file_bin(const char *path, uint8_t *data, uint32_t size)
 {
 	int fd = open(path, O_RDONLY);
@@ -111,9 +119,8 @@ void load_file_bin(const char *path, uint8_t *data, uint32_t size)
 
 struct simulator {
 	uint32_t cur_pc;
-	uint32_t next_pc;
 	uint32_t jump_addr;
-	bool branch_delay_slot; /* set if the current instruction is in the slot */
+	bool jump;
 	uint32_t reg[32];
 	uint8_t *dmem;
 	uint8_t *imem;
@@ -347,7 +354,7 @@ void sw(struct simulator *sim, uint32_t addr, uint32_t value)
 	sim->dmem[addr + 0] = (value >> 24) & 0xFF;
 }
 
-void simulator_run(struct simulator *sim, uint64_t num_steps)
+void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2)
 {
 	for (uint64_t i = 0; i < num_steps; i++) {
 		uint32_t pc = sim->cur_pc;
@@ -356,17 +363,43 @@ void simulator_run(struct simulator *sim, uint64_t num_steps)
 			return;
 		}
 		uint32_t instr_code = u8to32(&sim->imem[pc - PC_START]);
-
-		sim->cur_pc = sim->next_pc;
-		sim->next_pc += 4;
-
 		struct instr instr;
-		parse_instr(instr_code, &instr);
+		memset(&instr, 0, sizeof(instr));
+
+
+		/* cur_pc points to the next instruction */
+		if (sim->jump) {
+			sim->cur_pc = sim->jump_addr;
+			sim->jump = false;
+			if (v2) {
+				parse_instr_v2(instr_code, &instr);
+			} else {
+				parse_instr(instr_code, &instr);
+			}
+		} else {
+			if (v2) {
+				if (instr_code < 0x80000000) {
+					/* long instruction */
+					sim->cur_pc += 4;
+				} else {
+					sim->cur_pc += 2;
+				}
+				parse_instr_v2(instr_code, &instr);
+			} else {
+				sim->cur_pc += 4;
+				parse_instr(instr_code, &instr);
+			}
+		}
+
+		int size_next_instr = 4; 
+		if (v2 && sim->imem[sim->cur_pc - PC_START] >= 0x80) {
+			size_next_instr = 2;
+		}
 
 		assert(instr.op < NOP);
 	
 		if (debug) {
-			fprintf(stderr, "%8.8X:", pc);
+			fprintf(stderr, "%8.8X: (%8.8X) ", pc, instr_code);
 			print_instr(&instr); 
 		}
 
@@ -515,70 +548,82 @@ void simulator_run(struct simulator *sim, uint64_t num_steps)
 
 		case BLTZ:
 			if (rs >= 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case BGEZ:
 			if (rs < 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case BLTZAL:
-			sim->reg[31] = sim->cur_pc + 4;
+			sim->reg[31] = sim->cur_pc + size_next_instr;
 			if (rs >= 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case BGEZAL:
-			sim->reg[31] = sim->cur_pc + 4;
+			sim->reg[31] = sim->cur_pc + size_next_instr;
 			if (rs < 0x80000000) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case BEQ:
 			if (rs == rt) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case BNE:
 			if (rs != rt) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case BLEZ:
 			if (rs >= 0x80000000 || rs == 0) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case BGTZ:
 			if (rs < 0x80000000 && rs > 0) {
-				sim->next_pc = sim->cur_pc + simm;
+				sim->jump_addr = sim->cur_pc + simm;
+				sim->jump = true;
 			}
 			break;
 
 		case J:
-			sim->next_pc = (sim->cur_pc & 0xF0000000) | (instr.addr & 0x0FFFFFFF);
+			sim->jump_addr = (sim->cur_pc & 0xF0000000) | (instr.addr & 0x0FFFFFFF);
+			sim->jump = true;
 			break;
 
 		case JAL:
-			sim->next_pc = (sim->cur_pc & 0xF0000000) | (instr.addr & 0x0FFFFFFF);
-			sim->reg[31] = sim->cur_pc + 4;
+			sim->jump_addr = (sim->cur_pc & 0xF0000000) | (instr.addr & 0x0FFFFFFF);
+			sim->reg[31] = sim->cur_pc + size_next_instr;
+			sim->jump = true;
 			break;
 
 		case JR:
-			sim->next_pc = rs;
+			sim->jump_addr = rs;
+			sim->jump = true;
 			break;
 
 		case JALR:
-			sim->next_pc = rs;
-			sim->reg[instr.rd] = sim->cur_pc + 4;
+			sim->jump_addr = rs;
+			sim->reg[instr.rd] = sim->cur_pc + size_next_instr;
+			sim->jump = true;
 			break;
 
 		default:
@@ -598,12 +643,14 @@ int main(int argc, char *argv[])
 	uint32_t dmem_size  = DEFAULT_DMEM_SIZE;
 	uint64_t num_cycles = DEFAULT_NUM_CYCLES;
 
+	bool v2 = false;
+
 	const char *bin_file_path = NULL;
 	const char *data_file_path = NULL;
 
 	int opt = 0;
 
-	while ((opt = getopt(argc, argv, "i:d:c:x")) != -1) {
+	while ((opt = getopt(argc, argv, "i:d:cn:x")) != -1) {
 		switch (opt) {
 		case 'i':
 			imem_size = 1024 * str_to_uint32(optarg);
@@ -613,12 +660,16 @@ int main(int argc, char *argv[])
 			dmem_size = 1024 * str_to_uint32(optarg);
 			break;
 
-		case 'c':
+		case 'n':
 			num_cycles = str_to_uint64(optarg);
 			break;
 
 		case 'x':
 			debug = true;
+			break;
+
+		case 'c':
+			v2 = true;
 			break;
 
 		case '?':
@@ -646,7 +697,6 @@ int main(int argc, char *argv[])
 
 	memset(&sim, 0, sizeof(sim));
 	sim.cur_pc = PC_START;
-	sim.next_pc = sim.cur_pc + 4;
 
 	sim.imem = calloc(1, imem_size);
 	sim.dmem = calloc(1, dmem_size);
@@ -658,7 +708,7 @@ int main(int argc, char *argv[])
 	if (data_file_path != NULL)
 		load_file_bin(data_file_path, sim.dmem + 4, sim.dmem_size - 4);
 	
-	simulator_run(&sim, num_cycles);
+	simulator_run(&sim, num_cycles, v2);
 
 	free(sim.imem);
 	free(sim.dmem);
