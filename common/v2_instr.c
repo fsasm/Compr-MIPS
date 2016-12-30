@@ -180,10 +180,11 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 		out->compressed = true;
 		switch(opcode) {
 		case C_MOV:
-			out->op = ADDU;
+			out->op = SLL;
 			out->rd = rds;
 			out->rs = 0;
 			out->rt = rt;
+			out->shamt = 0;
 			break;
 
 		case C_ADDU:
@@ -252,6 +253,7 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 		case C_SLL:
 			out->op = SLL;
 			out->rd = rds;
+			out->rs = 0;
 			out->rt = rds;
 			out->shamt = uimm;
 			break;
@@ -259,6 +261,7 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 		case C_SRL:
 			out->op = SRL;
 			out->rd = rds;
+			out->rs = 0;
 			out->rt = rds;
 			out->shamt = uimm;
 			break;
@@ -266,6 +269,7 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 		case C_SRA:
 			out->op = SRA;
 			out->rd = rds;
+			out->rs = 0;
 			out->rt = rds;
 			out->shamt = uimm;
 			break;
@@ -280,12 +284,14 @@ int parse_instr_v2(uint32_t instr, struct instr *out)
 		case C_B:
 			out->op = BGEZ;
 			out->rs = 0;
+			out->rt = 0;
 			out->simm = offset * 2;
 			break;
 
 		case C_BAL:
 			out->op = BGEZAL;
 			out->rs = 0;
+			out->rt = 0;
 			out->simm = offset * 2;
 			break;
 
@@ -602,7 +608,7 @@ int write_instr_v2(struct instr *instr, uint32_t *out)
 		break;
 
 	case SRA:
-		*out = write_ui(C_ANDI, instr->rd, instr->shamt);
+		*out = write_ui(C_SRA, instr->rd, instr->shamt);
 		break;
 
 	case LSI:

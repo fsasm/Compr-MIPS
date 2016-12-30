@@ -15,7 +15,7 @@
 #define PRINT_R_REV(op) PRINT("%s r%d, r%d, r%d\n", op, instr->rd, instr->rt, instr->rs)
 #define PRINT_S(op)  PRINT("%s r%d, r%d, %d\n", op, instr->rd, instr->rt, instr->shamt)
 #define PRINT_I(op)  PRINT("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->imm)
-#define PRINT_I2(op) PRINT("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
+#define PRINT_I2(op) PRINT("%s r%d, %d\n", op, instr->rs, instr->simm)
 #define PRINT_Is(op) PRINT("%s r%d, r%d, %d\n", op, instr->rt, instr->rs, instr->simm)
 #define PRINT_LS(op) PRINT("%s r%d, %d(r%d)\n", op, instr->rt, instr->simm, instr->rs)
 

@@ -72,17 +72,17 @@ enum operation {
 
 	/* Pseudo instructions */
 	NOP,
-	MOV,
-	CLEAR,
-	NOT,
-	NEG,
+	MOV, /* rd = rt */
+	CLEAR, /* rd = 0 */
+	NOT, /* rd = ~rt */
+	NEG, /* rd = -rt */
 	B,
 	BAL, 
-	BEQZ,
-	BNEZ,
-	SEQZ,
-	SNEZ,
-	SLTZ,
+	BEQZ, /* rs */
+	BNEZ, /* rs */
+	SEQZ, /* rd = rt == 0 */
+	SNEZ, /* rd = rt != 0 */
+	SLTZ, /* rd = rt <  0 */
 	LSI, /* load small immediate */
 
 	NUM_INSTR,

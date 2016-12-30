@@ -534,14 +534,12 @@ void conv_to_pseudo(struct instr *out)
 	case SLT:
 		if (rt == 0) {
 			out->op = SLTZ;
-			out->rt = rs;
 		}
 		break;
 	
 	case SLTU:
 		if (rs == 0) {
 			out->op = SNEZ;
-			out->rt = rs;
 		}
 		break;
 	
@@ -549,15 +547,12 @@ void conv_to_pseudo(struct instr *out)
 		if (out->simm == 0) {
 			out->op = SLTZ;
 			out->rd = rt;
-			out->rt = rs;
 		}
 		break;
 
 	case SLTIU:
 		if (imm == 1) {
 			out->op = SEQZ;
-			out->rd = rt;
-			out->rt = rs;
 		}
 		break;
 	
@@ -675,8 +670,12 @@ bool is_compressible_simple(struct instr *instr)
 		return false;
 
 	case ADDIU:
-	case ANDI:
 		if (rs == rt && -16 <= simm && simm <= 15)
+			return true;
+		return false;
+
+	case ANDI:
+		if (rs == rt && imm <= 31)
 			return true;
 		return false;
 
@@ -734,11 +733,13 @@ void conv_to_native(struct instr *out)
 	case B:
 		out->op = BGEZ;
 		out->rs = 0;
+		out->rt = 0;
 		break;
 
 	case BAL: 
 		out->op = BGEZAL;
 		out->rs = 0;
+		out->rt = 0;
 		break;
 
 	case BEQZ:
@@ -757,10 +758,12 @@ void conv_to_native(struct instr *out)
 
 	case SNEZ:
 		out->op = SLTU;
+		out->rs = 0;
 		break;
 
 	case SLTZ:
 		out->op = SLT;
+		out->rt = 0;
 		break;
 
 	case LSI:
