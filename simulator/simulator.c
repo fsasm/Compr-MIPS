@@ -26,6 +26,9 @@
 #define DEFAULT_IMEM_SIZE (16 * 1024)
 #define DEFAULT_DMEM_SIZE (16 * 1024)
 
+#define UART_STATUS (0xFFFFFFF8)
+#define UART_DATA (0xFFFFFFFC)
+
 static char *program_name = "simulator";
 static bool debug = false;
 
@@ -188,11 +191,11 @@ static bool is_eof = false;
 
 uint32_t lb(struct simulator *sim, uint32_t addr)
 {
-	if (addr == 0xFFFFFFF8) { /* UART_STATUS */
+	if (addr == UART_STATUS) {
 		return 0x03; /* always ready */
 	}
 
-	if (addr == 0xFFFFFFFC) { /* UART_DATA */
+	if (addr == UART_DATA) {
 		if (is_eof)
 			return 1;
 
@@ -204,8 +207,11 @@ uint32_t lb(struct simulator *sim, uint32_t addr)
 		return sign_b(c);
 	}
 
+	/* loads outside the valid range are ignored and read a zero value */
 	if (addr >= sim->dmem_size) {
-		return 0; /* TODO */
+		fprintf(stderr, "Warning: Reading from address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return 0;
 	}
 
 	return sign_b(sim->dmem[addr]);
@@ -213,11 +219,11 @@ uint32_t lb(struct simulator *sim, uint32_t addr)
 
 uint32_t lbu(struct simulator *sim, uint32_t addr)
 {
-	if (addr == 0xFFFFFFF8) { /* UART_STATUS */
+	if (addr == UART_STATUS) {
 		return 0x03; /* always ready */
 	}
 
-	if (addr == 0xFFFFFFFC) { /* UART_DATA */
+	if (addr == UART_DATA) {
 		if (is_eof)
 			return 1;
 
@@ -229,8 +235,11 @@ uint32_t lbu(struct simulator *sim, uint32_t addr)
 		return c;
 	}
 
+	/* loads outside the valid range are ignored and read a zero value */
 	if (addr >= sim->dmem_size) {
-		return 0; /* TODO */
+		fprintf(stderr, "Warning: Reading from address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return 0;
 	}
 
 	return sim->dmem[addr];
@@ -238,18 +247,29 @@ uint32_t lbu(struct simulator *sim, uint32_t addr)
 
 uint32_t lh(struct simulator *sim, uint32_t addr)
 {
-	if (addr == 0xFFFFFFF8) { /* UART_STATUS */
+	if (addr == UART_STATUS) {
 		return 0x03; /* always ready */
 	}
 
-	if (addr == 0xFFFFFFFC) { /* UART_DATA */
-		return 0x00; /* TODO */
+	if (addr == UART_DATA) {
+		if (is_eof)
+			return 1;
+
+		int c = getchar();
+		if (c == EOF) {
+			is_eof = true;
+			return 0;
+		}
+		return c;
 	}
 
+	/* loads outside the valid range are ignored and read a zero value */
 	if (addr >= sim->dmem_size) {
-		return 0; /* TODO */
+		fprintf(stderr, "Warning: Reading from address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return 0;
 	}
-	
+
 	uint16_t b0 = sim->dmem[addr + 1];
 	uint16_t b1 = sim->dmem[addr];
 	b0 |= b1 << 8;
@@ -258,16 +278,27 @@ uint32_t lh(struct simulator *sim, uint32_t addr)
 
 uint32_t lhu(struct simulator *sim, uint32_t addr)
 {
-	if (addr == 0xFFFFFFF8) { /* UART_STATUS */
+	if (addr == UART_STATUS) {
 		return 0x03; /* always ready */
 	}
 
-	if (addr == 0xFFFFFFFC) { /* UART_DATA */
-		return 0x00; /* TODO */
+	if (addr == UART_DATA) {
+		if (is_eof)
+			return 1;
+
+		int c = getchar();
+		if (c == EOF) {
+			is_eof = true;
+			return 0;
+		}
+		return c;
 	}
 
+	/* loads outside the valid range are ignored and read a zero value */
 	if (addr >= sim->dmem_size) {
-		return 0; /* TODO */
+		fprintf(stderr, "Warning: Reading from address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return 0;
 	}
 	
 	uint16_t b0 = sim->dmem[addr + 1];
@@ -278,16 +309,27 @@ uint32_t lhu(struct simulator *sim, uint32_t addr)
 
 uint32_t lw(struct simulator *sim, uint32_t addr)
 {
-	if (addr == 0xFFFFFFF8) { /* UART_STATUS */
+	if (addr == UART_STATUS) {
 		return 0x03; /* always ready */
 	}
 
-	if (addr == 0xFFFFFFFC) { /* UART_DATA */
-		return 0x00; /* TODO */
+	if (addr == UART_DATA) {
+		if (is_eof)
+			return 1;
+
+		int c = getchar();
+		if (c == EOF) {
+			is_eof = true;
+			return 0;
+		}
+		return c;
 	}
 
+	/* loads outside the valid range are ignored and read a zero value */
 	if (addr >= sim->dmem_size) {
-		return 0; /* TODO */
+		fprintf(stderr, "Warning: Reading from address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return 0;
 	}
 	
 	uint32_t b0 = sim->dmem[addr];
@@ -301,34 +343,40 @@ uint32_t lw(struct simulator *sim, uint32_t addr)
 
 void sb(struct simulator *sim, uint32_t addr, uint32_t value)
 {
-	if (addr == 0xFFFFFFFC) {
+	if (addr == UART_DATA) {
 		printf("%c", value & 0xFF);
 		fflush(stdout);
 	}
 
-	if (addr == 0xFFFFFFF8) {
-		return; /* TODO */
+	if (addr == UART_STATUS) {
+		return; /* ignored */
 	}
 
-	if (addr >= sim->dmem_size)
-		return; /* TODO */	
+	if (addr >= sim->dmem_size) {
+		fprintf(stderr, "Warning: Writing to address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return;
+	}
 	
 	sim->dmem[addr] = value & 0xFF;
 }
 
 void sh(struct simulator *sim, uint32_t addr, uint32_t value)
 {
-	if (addr == 0xFFFFFFFC) {
+	if (addr == UART_DATA) {
 		printf("%c", value & 0xFF);
 		fflush(stdout);
 	}
 
-	if (addr == 0xFFFFFFF8) {
-		return; /* TODO */
+	if (addr == UART_STATUS) {
+		return; /* ignored */
 	}
 
-	if (addr >= sim->dmem_size)
-		return; /* TODO */	
+	if (addr >= sim->dmem_size) {
+		fprintf(stderr, "Warning: Writing to address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return;
+	}
 	
 	sim->dmem[addr + 1] = value & 0xFF;
 	sim->dmem[addr + 0] = (value >> 8) & 0xFF;
@@ -336,17 +384,20 @@ void sh(struct simulator *sim, uint32_t addr, uint32_t value)
 
 void sw(struct simulator *sim, uint32_t addr, uint32_t value)
 {
-	if (addr == 0xFFFFFFFC) {
+	if (addr == UART_DATA) {
 		printf("%c", value & 0xFF);
 		fflush(stdout);
 	}
 
-	if (addr == 0xFFFFFFF8) {
-		return; /* TODO */
+	if (addr == UART_STATUS) {
+		return; /* ignored */
 	}
 
-	if (addr >= sim->dmem_size)
-		return; /* TODO */	
+	if (addr >= sim->dmem_size) {
+		fprintf(stderr, "Warning: Writing to address 0x%X (max. addr. 0x%X)\n", 
+				addr, sim->dmem_size);
+		return;
+	}
 
 	sim->dmem[addr + 3] = value & 0xFF;
 	sim->dmem[addr + 2] = (value >> 8) & 0xFF;
@@ -399,7 +450,7 @@ void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2)
 		assert(instr.op < NOP);
 	
 		if (debug) {
-			fprintf(stderr, "%8.8X: (%8.8X) ", pc, instr_code);
+			fprintf(stdout, "%8.8X: (%8.8X) ", pc, instr_code);
 			print_instr(&instr); 
 		}
 
