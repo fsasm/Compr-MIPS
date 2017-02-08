@@ -49,14 +49,14 @@ static uint32_t to_instr4(uint8_t bytes[4])
 }
 
 #define PRINT(instr) \
-printf("%8s | %4i | %6.2f%% | %4i | %6.2f%% | %6.2f%%\n", \
+printf("%6s | %4i |    %6.2f%% | %4i |   %6.2f%% | %6.2f%%\n", \
 	#instr, freq[instr], (100.0 * freq[instr])/total_instr, freq_comp[instr], \
 	freq[instr] > 0 ? (100.0 * freq_comp[instr])/freq[instr] : 0, \
 	(100.0 * freq_comp[instr]) / total_instr)
 
 static void print_stat(int freq[NUM_INSTR], int freq_comp[NUM_INSTR], uint32_t total_instr, bool psd)
 {
-	printf("instr | freq | freq/total | comp | comp/freq | comp/total\n");
+	printf(" instr | freq | freq/total | comp | comp/freq | comp/total\n");
 	PRINT(SLL);
 	PRINT(SRL);
 	PRINT(SRA);
