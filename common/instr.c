@@ -628,6 +628,35 @@ bool is_branch(enum operation op)
 	}
 }
 
+bool contains_imm(enum operation op)
+{
+	switch(op) {
+		case ANDI:
+		case LUI: /* it's neither signed or unsigned on 32bit but signed on 64bit */
+		case ORI:
+		case XORI:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
+bool contains_simm(enum operation op)
+{
+	switch(op) {
+		case ADDI:
+		case ADDIU:
+		case SLTI:
+		case SLTIU:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
+
 bool is_compressible_simple(struct instr *instr)
 {
 	assert(instr != NULL);

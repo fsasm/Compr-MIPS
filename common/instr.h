@@ -107,6 +107,8 @@ void conv_to_pseudo(struct instr *out);
 void conv_to_native(struct instr *out);
 
 bool is_branch(enum operation op);
+bool contains_imm(enum operation op);
+bool contains_simm(enum operation op);
 
 bool is_compressible_simple(struct instr *instr);
 

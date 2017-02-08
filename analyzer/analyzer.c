@@ -19,16 +19,26 @@
 #include "../common/v2_instr.h"
 #include "imm_list.h"
 
+#define CONV_PSEUDO (0x01)
+#define COMPRESSED  (0x02)
+#define BRANCH_STAT (0x04)
+#define STACK_STAT  (0x08)
+#define IMM_STAT    (0x10)
+
 static char *program_name = "analyzer";
 
 static struct imm_list branch_list;
+static struct imm_list uimm_list;
+static struct imm_list simm_list;
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s [-c] [-p] [-b] FILE\n", program_name);
+	fprintf(stderr, "Usage: %s [-c] [-p] [-b] [-m] [-i] FILE\n", program_name);
 	fprintf(stderr, "\t-c\tUse the compressed instruction format\n");
 	fprintf(stderr, "\t-p\tConvert to pseudo instructions\n");
 	fprintf(stderr, "\t-b\tShow statistics about branch offsets\n");
+	fprintf(stderr, "\t-m\tShow statistics about stack offsets\n");
+	fprintf(stderr, "\t-i\tShow statistics about immediates\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -162,6 +172,19 @@ static void update_branch_stat(struct instr *instr)
 	}
 }
 
+static void update_imm_stat(struct instr *instr)
+{
+	assert(instr != NULL);
+
+	if (contains_imm(instr->op)) {
+		imm_list_add_unsigned(&uimm_list, instr->imm);
+	}
+
+	if (contains_simm(instr->op)) {
+		imm_list_add_signed(&simm_list, instr->simm);
+	}
+}
+
 struct mem_stat {
 	int16_t imm;
 	unsigned int w_count;
@@ -278,16 +301,24 @@ static int cmp_mem_stat(const void *left, const void *right)
 }
 
 
-static void analyze2(FILE *in, bool psd, bool v2, bool branch_stat, bool show_mem_stat)
+static void analyze2(FILE *in, uint32_t flags)
 {
 	uint8_t bytes[4];
 	int freq[NUM_INSTR] = {0};
 	int freq_comp[NUM_INSTR] = {0};
 	struct instr instr;
 
+	bool psd           = (flags & CONV_PSEUDO) != 0;
+	bool v2            = (flags & COMPRESSED)  != 0;
+	bool branch_stat   = (flags & BRANCH_STAT) != 0;
+	bool show_mem_stat = (flags & STACK_STAT)  != 0;
+	bool imm_stat      = (flags & IMM_STAT)    != 0;
+
 	uint32_t total_instr = 0;
 
 	imm_list_init(&branch_list);
+	imm_list_init(&uimm_list);
+	imm_list_init(&simm_list);
 
 	if (v2) {
 		while(fread(bytes, 2, 1, in) == 1) {
@@ -318,6 +349,7 @@ static void analyze2(FILE *in, bool psd, bool v2, bool branch_stat, bool show_me
 
 			update_branch_stat(&instr);
 			update_mem_stat(&instr);
+			update_imm_stat(&instr);
 		}
 	} else {
 		while(fread(bytes, sizeof(bytes), 1, in) == 1) {
@@ -338,6 +370,7 @@ static void analyze2(FILE *in, bool psd, bool v2, bool branch_stat, bool show_me
 
 			update_branch_stat(&instr);
 			update_mem_stat(&instr);
+			update_imm_stat(&instr);
 		}
 	}
 
@@ -349,6 +382,7 @@ static void analyze2(FILE *in, bool psd, bool v2, bool branch_stat, bool show_me
 	uint32_t num_uncomp = total_instr - num_comp;
 	uint32_t uncomp_size = total_instr * 4;
 	uint32_t comp_size = num_comp * 2 + num_uncomp * 4;
+
 	printf("Num small instructions: %u (%5.2f%%)\n", num_comp, (100.0 * num_comp) / total_instr);
 	printf("Num big instructions: %u (%5.2f%%)\n", num_uncomp, (100.0 * num_uncomp) / total_instr);
 	printf("Uncompressed size %u bytes\n", uncomp_size);
@@ -374,6 +408,68 @@ static void analyze2(FILE *in, bool psd, bool v2, bool branch_stat, bool show_me
 				mem_stat[i].bu_count);
 		}
 	}
+
+	if (imm_stat) {
+		imm_list_sort_unsigned(&uimm_list);
+		imm_list_sort_signed(&simm_list);
+
+		printf("All immediates:\n");
+		printf("imm   |  U    S | total\n");
+
+		struct imm_entry *uimm_entries = uimm_list.entries;
+		struct imm_entry *simm_entries = simm_list.entries;
+
+		/*
+		for (size_t i = 0; i < uimm_list.num_entries; i++) {
+			printf("%5i | %u %u | \n", uimm_entries[i].imm, uimm_entries[i].num, 0);
+		}
+
+		for (size_t i = 0; i < simm_list.num_entries; i++) {
+			printf("%5i | %u %u | \n", simm_entries[i].simm, 0, simm_entries[i].num);
+		}
+		*/
+
+		size_t u_iter = 0;
+		size_t s_iter = 0;
+
+		do {
+			if (u_iter < uimm_list.num_entries && s_iter == simm_list.num_entries) {
+				uint32_t times = uimm_entries[u_iter].num;
+				int32_t uimm = uimm_entries[u_iter].imm;
+
+				printf("%5i | %3u   0 | %3u\n", uimm, times, times);
+
+				u_iter++;
+			} else if (u_iter == uimm_list.num_entries && s_iter < simm_list.num_entries) {
+				uint32_t times = simm_entries[s_iter].num;
+				int32_t simm = simm_entries[s_iter].simm;
+
+				printf("%5i |   0 %3u | %3u\n", simm, times, times);
+
+				s_iter++;
+			} else {
+				int32_t uimm = uimm_entries[u_iter].imm;
+				int32_t simm = simm_entries[s_iter].simm;
+
+				uint32_t stimes = simm_entries[s_iter].num;
+				uint32_t utimes = uimm_entries[u_iter].num;
+				
+				if (uimm < simm) {
+					printf("%5i | %3u   0 | %3u\n", uimm, utimes, utimes);
+					u_iter++;
+				} else if (simm < uimm) {
+					printf("%5i |   0 %3u | %3u\n", simm, stimes, stimes);
+					s_iter++;
+				} else {
+					assert(simm == uimm);
+					printf("%5i | %3u %3u | %3u\n", simm, utimes, stimes, utimes + stimes);
+					s_iter++;
+					u_iter++;
+				}
+			}
+
+		} while (u_iter < uimm_list.num_entries || s_iter < simm_list.num_entries);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -381,29 +477,30 @@ int main(int argc, char *argv[])
 	if (argc > 0)
 		program_name = argv[0];
 
-	bool v2 = false;
-	bool pseudo = false;
-	bool branch_stat = false;
-	bool show_mem_stat = false;
+	uint32_t flags = 0;
 
 	int opt = 0;
 
-	while ((opt = getopt(argc, argv, "mcbp")) != -1) {
+	while ((opt = getopt(argc, argv, "mcbpi")) != -1) {
 		switch (opt) {
 		case 'c':
-			v2 = true;
+			flags |= COMPRESSED;
 			break;
 
 		case 'b':
-			branch_stat = true;
+			flags |= BRANCH_STAT;
 			break;
 
 		case 'm':
-			show_mem_stat = true;
+			flags |= STACK_STAT;
 			break;
 
 		case 'p':
-			pseudo = true;
+			flags |= CONV_PSEUDO;
+			break;
+
+		case 'i':
+			flags |= IMM_STAT;
 			break;
 
 		case '?':
@@ -427,7 +524,7 @@ int main(int argc, char *argv[])
 	analyze2(file, false);
 	rewind(file);
 	printf("With pseudo instructions:\n");*/
-	analyze2(file, pseudo, v2, branch_stat, show_mem_stat);
+	analyze2(file, flags); 
 
 	fclose(file);
 
