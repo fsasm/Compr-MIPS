@@ -23,9 +23,10 @@ static char *program_name = "disas";
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s [-c] [-p] IN-FILE \n", program_name);
+	fprintf(stderr, "Usage: %s [-c] [-p] [-l] IN-FILE \n", program_name);
 	fprintf(stderr, "\t-c\tcompressed instruction format\n");
 	fprintf(stderr, "\t-p\tconvert to pseudo instructions if possible\n");
+	fprintf(stderr, "\t-l\tprint address of instructions\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -52,10 +53,11 @@ int main(int argc, char *argv[])
 
 	bool v2 = false;
 	bool conv = false;
+	bool print_addr = false;
 
 	int opt = 0;
 
-	while ((opt = getopt(argc, argv, "cp")) != -1) {
+	while ((opt = getopt(argc, argv, "cpl")) != -1) {
 		switch(opt) {
 		case 'c':
 			v2 = true;
@@ -63,6 +65,10 @@ int main(int argc, char *argv[])
 
 		case 'p':
 			conv = true;
+			break;
+
+		case 'l':
+			print_addr = true;
 			break;
 
 		case '?':
@@ -104,7 +110,10 @@ int main(int argc, char *argv[])
 				conv_to_pseudo(&instr);
 			}
 	
-			printf("%8.8x\t", addr);
+			if (print_addr) {
+				printf("%8.8x\t", addr);
+			}
+
 			print_instr(&instr);
 	
 			addr += 4;
@@ -132,7 +141,15 @@ int main(int argc, char *argv[])
 				conv_to_pseudo(&instr);
 			}
 	
-			printf("%8.8X\t", addr);
+			if (print_addr) {
+				printf("%8.8x\t", addr);
+			}
+
+			/* compressed instructions have the prefix c. */
+			if (code >= 0x80000000) {
+				printf("c.");
+			}
+
 			print_instr(&instr);
 	
 			if (code < 0x80000000) {
