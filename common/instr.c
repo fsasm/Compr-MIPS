@@ -407,7 +407,7 @@ void conv_to_pseudo(struct instr *out)
 			out->op = NOP;
 		} else if (rs == 0 && rt == 0) {
 			out->op = CLEAR;
-		} else if (rs == 0 || rs == 0) {
+		} else if (rs == 0 || rt == 0) {
 			out->op = MOV;
 			if (rt == 0) {
 				out->rt = rs;
