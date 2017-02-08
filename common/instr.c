@@ -689,7 +689,7 @@ bool is_compressible_simple(struct instr *instr)
 	case SW:
 	case LW:
 		/* Stack pointer is $29 */
-		if (rs == 29 && imm % 4 == 0 && imm <= 128)
+		if (rs == 29 && imm % 4 == 0 && imm < 128)
 			return true;
 		return false;
 	
