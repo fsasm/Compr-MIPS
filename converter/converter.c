@@ -168,8 +168,7 @@ static uint32_t compress_branch(size_t num, struct instr prog[num], struct instr
 {
 	uint32_t num_mod_instr = 0;
 
-	uint32_t num_corr = correct_branch_offsets(num, prog, attr);
-	printf("%u branch offsets corrected\n", num_corr);
+	correct_branch_offsets(num, prog, attr);
 
 	for (size_t i = 0; i < num_instr; i++) {
 		if (!is_branch(prog[i].op)) {
@@ -193,8 +192,7 @@ static uint32_t compress_branch(size_t num, struct instr prog[num], struct instr
 	}
 
 	calc_new_addr(num, prog, attr);
-	num_corr = correct_branch_offsets(num, prog, attr);
-	printf("%u branch offsets corrected\n", num_corr);
+	correct_branch_offsets(num, prog, attr);
 	return num_mod_instr;
 }
 
@@ -227,14 +225,34 @@ int main(int argc, char *argv[])
 
 	/* correct jump targets */
 	// TODO convert J and JAL to B/BAL if the user requests per option
-	correct_jump_targets(num_instr, prog, attr);
+	for (size_t i = 0; i < num_instr; i++) {
+		if (prog[i].op != J && prog[i].op != JAL) {
+			continue;
+		}
 
-	/*
+		ssize_t target = attr[i].target_index;
+		assert(0 <= target && target < (ssize_t)num_instr);
+
+		int32_t simm = attr[target].new_addr - attr[i + 1].new_addr;
+
+		if (-1024 <= simm && simm <= 1022) {
+			/* convert to B or BAL */
+			prog[i].simm = simm;
+			if (prog[i].op == J) {
+				prog[i].op = B;
+			} else {
+				prog[i].op = BAL;
+			}
+		}
+
+		attr[i].jump_target = attr[target].new_addr;
+	}
+	
+
 	uint32_t num_mod_instr = 0;
 	do {
 		num_mod_instr = compress_branch(num_instr, prog, attr);
 	} while (num_mod_instr != 0);
-	*/
 
 	correct_jump_targets(num_instr, prog, attr);
 
