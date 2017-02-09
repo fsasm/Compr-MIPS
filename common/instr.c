@@ -350,7 +350,11 @@ void conv_to_pseudo(struct instr *out)
 		if (rd == 0) {
 			out->op = NOP;
 		} else if (shamt == 0) {
-			out->op = MOV;
+			if (rt == 0) {
+				out->op = CLEAR;
+			} else {
+				out->op = MOV;
+			}
 		}
 		break;
 
@@ -361,6 +365,7 @@ void conv_to_pseudo(struct instr *out)
 			out->op = MOV;
 		} else if (shamt == 31) {
 			out->op = SLTZ;
+			out->rs = rt;
 		}
 		break;
 

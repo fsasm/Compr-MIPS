@@ -244,7 +244,7 @@ void print_instr(struct instr *instr)
 		break;
 
 	case SLTZ:
-		PRINT("sltz r%d, r%d\n", instr->rd, instr->rt);
+		PRINT("sltz r%d, r%d\n", instr->rd, instr->rs);
 		break;
 
 	case LSI:
