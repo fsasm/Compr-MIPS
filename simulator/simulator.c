@@ -346,6 +346,7 @@ void sb(struct simulator *sim, uint32_t addr, uint32_t value)
 	if (addr == UART_DATA) {
 		printf("%c", value & 0xFF);
 		fflush(stdout);
+		return;
 	}
 
 	if (addr == UART_STATUS) {
@@ -366,6 +367,7 @@ void sh(struct simulator *sim, uint32_t addr, uint32_t value)
 	if (addr == UART_DATA) {
 		printf("%c", value & 0xFF);
 		fflush(stdout);
+		return;
 	}
 
 	if (addr == UART_STATUS) {
@@ -387,6 +389,7 @@ void sw(struct simulator *sim, uint32_t addr, uint32_t value)
 	if (addr == UART_DATA) {
 		printf("%c", value & 0xFF);
 		fflush(stdout);
+		return;
 	}
 
 	if (addr == UART_STATUS) {
@@ -450,8 +453,10 @@ void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2)
 		assert(instr.op < NOP);
 	
 		if (debug) {
-			fprintf(stdout, "%8.8X: (%8.8X) ", pc, instr_code);
-			print_instr(&instr); 
+			//fprintf(stdout, "%8.8X: (%8.8X) ", pc, instr_code);
+			struct instr i2 = instr;
+			conv_to_pseudo(&i2);
+			print_instr(&i2); 
 		}
 
 		uint32_t rt = sim->reg[instr.rt];
