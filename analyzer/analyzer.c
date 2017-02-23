@@ -19,11 +19,13 @@
 #include "../common/v2_instr.h"
 #include "imm_list.h"
 
-#define CONV_PSEUDO (0x01)
-#define COMPRESSED  (0x02)
-#define BRANCH_STAT (0x04)
-#define STACK_STAT  (0x08)
-#define IMM_STAT    (0x10)
+#define CONV_PSEUDO  (0x01)
+#define COMPRESSED   (0x02)
+#define BRANCH_STAT  (0x04)
+#define STACK_STAT   (0x08)
+#define IMM_STAT     (0x10)
+#define NOP_DEL_STAT (0x20)
+#define REG_STAT     (0x40)
 
 static char *program_name = "analyzer";
 
@@ -33,12 +35,14 @@ static struct imm_list simm_list;
 
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s [-c] [-p] [-b] [-m] [-i] FILE\n", program_name);
+	fprintf(stderr, "Usage: %s [-cpbmidr] FILE\n", program_name);
 	fprintf(stderr, "\t-c\tUse the compressed instruction format\n");
 	fprintf(stderr, "\t-p\tConvert to pseudo instructions\n");
 	fprintf(stderr, "\t-b\tShow statistics about branch offsets\n");
 	fprintf(stderr, "\t-m\tShow statistics about stack offsets\n");
 	fprintf(stderr, "\t-i\tShow statistics about immediates\n");
+	fprintf(stderr, "\t-d\tShow statistics about NOPs in delay slots\n");
+	fprintf(stderr, "\t-r\tShow statistics about used registers\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -145,6 +149,16 @@ static bool is_compressible(struct instr *instr)
 	//if (is_compressible_simple(instr) || is_compressible_branch(instr))
 	if (is_compressible_simple(instr))
 		return true;
+
+	if (instr->op == B || instr->op == BAL) {
+		if (-1024 <= instr->simm && instr->simm <= 1022) {
+			return true;
+		}
+	} else if (instr->op == BEQZ || instr->op == BNEZ) {
+		if (-32 <= instr->simm && instr->simm <= 30) {
+			return true;
+		}
+	}
 	return false;
 }
 
@@ -300,6 +314,83 @@ static int cmp_mem_stat(const void *left, const void *right)
 	return 1;
 }
 
+static uint32_t num_branch_nops = 0;
+static uint32_t num_jump_nops = 0;
+static uint32_t num_load_nops = 0;
+
+static void update_nop_stat(struct instr *instr)
+{
+	assert(instr != NULL);
+
+	static bool prev_branch = false;
+	static bool prev_jump = false;
+	static bool prev_load = false;
+
+	assert(!(prev_branch && prev_jump));
+
+	struct instr temp = *instr;
+	conv_to_pseudo(&temp);
+
+	if (prev_branch) {
+		prev_branch = false;
+
+		if (temp.op == NOP) {
+			num_branch_nops++;
+		}
+	}
+
+	if (prev_jump) {
+		prev_jump = false;
+
+		if (temp.op == NOP) {
+			num_jump_nops++;
+		}
+	}
+
+	if (prev_load) {
+		prev_load = false;
+
+		if (temp.op == NOP && !(prev_branch || prev_jump)) {
+			num_load_nops++;
+		}
+	}
+
+	switch (instr->op) {
+	case BLTZ:
+	case BGEZ:
+	case BLTZAL:
+	case BGEZAL:
+	case BEQ:
+	case BNE:
+	case BLEZ:
+	case BGTZ:
+	case B:
+	case BAL: 
+	case BEQZ: /* rs */
+	case BNEZ: /* rs */
+		prev_branch = true;
+		return;
+
+	case J:
+	case JAL:
+	case JR:
+	case JALR:
+		prev_jump = true;
+		return;
+
+	case LB:
+	case LH:
+	case LW:
+	case LBU:
+	case LHU:
+		prev_load = true;
+		return;
+
+	default:
+		break;
+	}
+
+}
 
 static void analyze2(FILE *in, uint32_t flags)
 {
@@ -308,11 +399,12 @@ static void analyze2(FILE *in, uint32_t flags)
 	int freq_comp[NUM_INSTR] = {0};
 	struct instr instr;
 
-	bool psd           = (flags & CONV_PSEUDO) != 0;
-	bool v2            = (flags & COMPRESSED)  != 0;
-	bool branch_stat   = (flags & BRANCH_STAT) != 0;
-	bool show_mem_stat = (flags & STACK_STAT)  != 0;
-	bool imm_stat      = (flags & IMM_STAT)    != 0;
+	bool psd           = (flags & CONV_PSEUDO)  != 0;
+	bool v2            = (flags & COMPRESSED)   != 0;
+	bool branch_stat   = (flags & BRANCH_STAT)  != 0;
+	bool show_mem_stat = (flags & STACK_STAT)   != 0;
+	bool imm_stat      = (flags & IMM_STAT)     != 0;
+	bool nop_stat      = (flags & NOP_DEL_STAT) != 0;
 
 	uint32_t total_instr = 0;
 
@@ -350,6 +442,7 @@ static void analyze2(FILE *in, uint32_t flags)
 			update_branch_stat(&instr);
 			update_mem_stat(&instr);
 			update_imm_stat(&instr);
+			update_nop_stat(&instr);
 		}
 	} else {
 		while(fread(bytes, sizeof(bytes), 1, in) == 1) {
@@ -371,6 +464,7 @@ static void analyze2(FILE *in, uint32_t flags)
 			update_branch_stat(&instr);
 			update_mem_stat(&instr);
 			update_imm_stat(&instr);
+			update_nop_stat(&instr);
 		}
 	}
 
@@ -470,6 +564,13 @@ static void analyze2(FILE *in, uint32_t flags)
 
 		} while (u_iter < uimm_list.num_entries || s_iter < simm_list.num_entries);
 	}
+
+	if (nop_stat) {
+		printf("%u NOPs in Branch delay slots\n", num_branch_nops);
+		printf("%u NOPs in Jump delay slots\n", num_jump_nops);
+		printf("%u NOPs in Load delay slots\n", num_load_nops);
+		printf("Total %u NOPs in delay slots\n", num_branch_nops + num_jump_nops + num_load_nops);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -481,7 +582,7 @@ int main(int argc, char *argv[])
 
 	int opt = 0;
 
-	while ((opt = getopt(argc, argv, "mcbpi")) != -1) {
+	while ((opt = getopt(argc, argv, "mcbpird")) != -1) {
 		switch (opt) {
 		case 'c':
 			flags |= COMPRESSED;
@@ -501,6 +602,14 @@ int main(int argc, char *argv[])
 
 		case 'i':
 			flags |= IMM_STAT;
+			break;
+
+		case 'r':
+			flags |= REG_STAT;
+			break;
+
+		case 'd':
+			flags |= NOP_DEL_STAT;
 			break;
 
 		case '?':
