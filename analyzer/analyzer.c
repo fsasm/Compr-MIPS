@@ -32,6 +32,8 @@ static char *program_name = "analyzer";
 static struct imm_list branch_list;
 static struct imm_list uimm_list;
 static struct imm_list simm_list;
+uint32_t rs_count[32] = {0};
+uint32_t rd_count[32] = {0};
 
 static void usage(void)
 {
@@ -392,6 +394,139 @@ static void update_nop_stat(struct instr *instr)
 
 }
 
+static void update_reg_stat(struct instr *instr)
+{
+	assert(instr != NULL);
+
+	switch(instr->op) {
+	case SLL:
+	case SRL:
+	case SRA:
+		rs_count[instr->rt]++;
+		rd_count[instr->rd]++;
+		break;
+
+	case SLLV:
+	case SRLV:
+	case SRAV:
+	case ADD:
+	case ADDU:
+	case SUB:
+	case SUBU:
+	case AND:
+	case OR:
+	case XOR:
+	case NOR:
+	case SLT:
+	case SLTU:
+		rs_count[instr->rs]++;
+		rs_count[instr->rt]++;
+		rd_count[instr->rd]++;
+		break;
+
+	case ADDI:
+	case ADDIU:
+	case ANDI:
+	case ORI:
+	case XORI:
+	case LB:
+	case LH:
+	case LW:
+	case LBU:
+	case LHU:
+	case SLTI:
+	case SLTIU:
+		rs_count[instr->rs]++;
+		rd_count[instr->rt]++;
+		break;
+
+	case LUI:
+		rd_count[instr->rt]++;
+		break;
+
+	case SB:
+	case SH:
+	case SW:
+	case BEQ:
+	case BNE:
+		rs_count[instr->rs]++;
+		rs_count[instr->rt]++;
+		break;
+
+
+	case BLTZ:
+	case BGEZ:
+	case BLEZ:
+	case BGTZ:
+	case JR:
+		rs_count[instr->rs]++;
+		break;
+
+	case BLTZAL:
+	case BGEZAL:
+		rs_count[instr->rs]++;
+		rd_count[31]++;
+		break;
+
+
+	case JAL:
+	case BAL: 
+		rd_count[31]++;
+		break;
+
+	case JALR:
+		rs_count[instr->rs]++;
+		rd_count[instr->rd]++;
+		break;
+
+	case MFC0:
+	case MTC0:
+	case J:
+	case NOP:
+	case B:
+		break;
+
+	case MOV: /* rd = rt */
+	case NOT: /* rd = ~rt */
+	case NEG: /* rd = -rt */
+		rs_count[instr->rt]++;
+		rd_count[instr->rd]++;
+		break;
+
+	case CLEAR: /* rd = 0 */
+		rd_count[instr->rd]++;
+		break;
+
+	case BEQZ: /* rs */
+	case BNEZ: /* rs */
+		rs_count[instr->rs]++;
+		break;
+
+	case SEQZ: /* rd = rt == 0 */
+		rs_count[instr->rs]++;
+		rd_count[instr->rt]++;
+		break;
+
+	case SNEZ: /* rd = rt != 0 */
+		rs_count[instr->rt]++;
+		rd_count[instr->rd]++;
+		break;
+
+	case SLTZ: /* rd = rt <  0 */
+		rs_count[instr->rs]++;
+		rd_count[instr->rt]++;
+		break;
+
+	case LSI: /* load small immediate */
+		rd_count[instr->rd]++;
+		break;
+	
+	default:
+		return;
+	}
+}
+
+
 static void analyze2(FILE *in, uint32_t flags)
 {
 	uint8_t bytes[4];
@@ -405,6 +540,7 @@ static void analyze2(FILE *in, uint32_t flags)
 	bool show_mem_stat = (flags & STACK_STAT)   != 0;
 	bool imm_stat      = (flags & IMM_STAT)     != 0;
 	bool nop_stat      = (flags & NOP_DEL_STAT) != 0;
+	bool reg_stat      = (flags & REG_STAT)     != 0;
 
 	uint32_t total_instr = 0;
 
@@ -443,6 +579,7 @@ static void analyze2(FILE *in, uint32_t flags)
 			update_mem_stat(&instr);
 			update_imm_stat(&instr);
 			update_nop_stat(&instr);
+			update_reg_stat(&instr);
 		}
 	} else {
 		while(fread(bytes, sizeof(bytes), 1, in) == 1) {
@@ -465,6 +602,7 @@ static void analyze2(FILE *in, uint32_t flags)
 			update_mem_stat(&instr);
 			update_imm_stat(&instr);
 			update_nop_stat(&instr);
+			update_reg_stat(&instr);
 		}
 	}
 
@@ -570,6 +708,14 @@ static void analyze2(FILE *in, uint32_t flags)
 		printf("%u NOPs in Jump delay slots\n", num_jump_nops);
 		printf("%u NOPs in Load delay slots\n", num_load_nops);
 		printf("Total %u NOPs in delay slots\n", num_branch_nops + num_jump_nops + num_load_nops);
+	}
+
+	if (reg_stat) {
+		
+		printf("reg |  src |  dst\n");
+		for (uint32_t i = 0; i < 32; i++) {
+			printf("r%-2u | %4u | %4u\n", i, rs_count[i], rd_count[i]);
+		}
 	}
 }
 
