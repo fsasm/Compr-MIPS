@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
+#include <inttypes.h>
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -32,13 +33,19 @@
 static char *program_name = "simulator";
 static bool debug = false;
 
+static uint64_t total_bandwidth = 0;
+
 static void usage(void)
 {
-	fprintf(stderr, "Usage: %s [-i IMEM_SIZE] [-d DMEM_SIZE] [-n CYCLES] [-c] BIN-FILE [DATA-FILE]\n", program_name);
+	fprintf(stderr, "Usage: %s [-i IMEM_SIZE] [-d DMEM_SIZE] [-n CYCLES] [-t TRACE_FILE] [-cxbr] BIN-FILE [DATA-FILE]\n", program_name);
 	fprintf(stderr, "\t-i\tSize in kiB of the instruction memory\n");
 	fprintf(stderr, "\t-d\tSize in kiB of the data memory\n");
 	fprintf(stderr, "\t-n\tNumber of cycles to execute. Default: %d\n", DEFAULT_NUM_CYCLES);
 	fprintf(stderr, "\t-c\tUse compressed instruction format\n");
+	fprintf(stderr, "\t-x\tPrints every executed instruction\n");
+	fprintf(stderr, "\t-b\tPrints the total dynamic bandwidth of the instruction stream\n");
+	fprintf(stderr, "\t-t\tSave trace information to file\n");
+	fprintf(stderr, "\t-r\tPrint the register file to stderr at the end of execution\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -408,9 +415,11 @@ void sw(struct simulator *sim, uint32_t addr, uint32_t value)
 	sim->dmem[addr + 0] = (value >> 24) & 0xFF;
 }
 
-void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2)
+void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2, int trace_fd)
 {
-	for (uint64_t i = 0; i < num_steps; i++) {
+	bool force_stop = false;
+
+	for (uint64_t i = 0; i < num_steps && !force_stop; i++) {
 		uint32_t pc = sim->cur_pc;
 		if (pc < PC_START) {
 			fprintf(stdout, "Invalid pc(0x%X). Must be >= 0x%X\n", pc, PC_START);
@@ -419,7 +428,6 @@ void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2)
 		uint32_t instr_code = u8to32(&sim->imem[pc - PC_START]);
 		struct instr instr;
 		memset(&instr, 0, sizeof(instr));
-
 
 		/* cur_pc points to the next instruction */
 		if (sim->jump) {
@@ -450,6 +458,14 @@ void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2)
 			size_next_instr = 2;
 		}
 
+		if (trace_fd >= 0) {
+			if (v2 && instr_code >= 0x80000000) {
+				write(trace_fd, &sim->imem[pc - PC_START], sizeof(uint16_t));
+			} else {
+				write(trace_fd, &sim->imem[pc - PC_START], sizeof(uint32_t));
+			}
+		}
+
 		assert(instr.op < NOP);
 	
 		if (debug) {
@@ -457,6 +473,12 @@ void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2)
 			struct instr i2 = instr;
 			conv_to_pseudo(&i2);
 			print_instr(&i2); 
+		}
+
+		if (instr.compressed) {
+			total_bandwidth += 2;
+		} else {
+			total_bandwidth += 4;
 		}
 
 		uint32_t rt = sim->reg[instr.rt];
@@ -700,13 +722,16 @@ int main(int argc, char *argv[])
 	uint64_t num_cycles = DEFAULT_NUM_CYCLES;
 
 	bool v2 = false;
+	bool print_bandwidth = false;
+	bool print_regfile = false;
 
 	const char *bin_file_path = NULL;
 	const char *data_file_path = NULL;
+	char *trace_file_path = NULL;
 
 	int opt = 0;
 
-	while ((opt = getopt(argc, argv, "i:d:cn:x")) != -1) {
+	while ((opt = getopt(argc, argv, "i:d:cn:xbt:r")) != -1) {
 		switch (opt) {
 		case 'i':
 			imem_size = 1024 * str_to_uint32(optarg);
@@ -726,6 +751,18 @@ int main(int argc, char *argv[])
 
 		case 'c':
 			v2 = true;
+			break;
+
+		case 'b':
+			print_bandwidth = true;
+			break;
+
+		case 't':
+			trace_file_path = strdup(optarg);
+			break;
+
+		case 'r':
+			print_regfile = true;
 			break;
 
 		case '?':
@@ -761,13 +798,34 @@ int main(int argc, char *argv[])
 	sim.dmem_size = dmem_size;
 
 	load_file_bin(bin_file_path, sim.imem, sim.imem_size);
-	if (data_file_path != NULL)
+	if (data_file_path != NULL) {
 		load_file_bin(data_file_path, sim.dmem + 4, sim.dmem_size - 4);
+	}
+
+	int trace_fd = -1;
+	if (trace_file_path != NULL) {
+		trace_fd = creat(trace_file_path, 0666);
+	}
 	
-	simulator_run(&sim, num_cycles, v2);
+	simulator_run(&sim, num_cycles, v2, trace_fd);
+
+	if (print_bandwidth) {
+		printf("total instruction bandwidth: %" PRIu64 " bytes\n",
+			total_bandwidth
+		);
+	}
+
+	if (print_regfile) {
+		for (int i = 0; i < 32; i++) {
+			fprintf(stderr, "reg %2d: %8.8X\n",i, sim.reg[i]);
+		}
+		fprintf(stderr, "hi: %8.8X\n", sim.hi);
+		fprintf(stderr, "lo: %8.8X\n", sim.lo);
+	}
 
 	free(sim.imem);
 	free(sim.dmem);
+	free(trace_file_path);
 
 	return 0;
 }
