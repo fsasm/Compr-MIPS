@@ -124,6 +124,15 @@ static void print_stat(int freq[NUM_INSTR], int freq_comp[NUM_INSTR], uint32_t t
 	PRINT(MFC0);
 	PRINT(MTC0);
 
+	PRINT(MULT);
+	PRINT(MULTU);
+	PRINT(DIV);
+	PRINT(DIVU);
+	PRINT(MTHI);
+	PRINT(MTLO);
+	PRINT(MFHI);
+	PRINT(MFLO);
+
 	if (psd) {
 		PRINT(NOP);
 		PRINT(MOV);
@@ -436,8 +445,17 @@ static void update_reg_stat(struct instr *instr)
 	case LHU:
 	case SLTI:
 	case SLTIU:
+	case DIV:
+	case DIVU:
+	case MULT:
+	case MULTU:
 		rs_count[instr->rs]++;
 		rd_count[instr->rt]++;
+		break;
+
+	case MFHI:
+	case MFLO:
+		rd_count[instr->rd]++;
 		break;
 
 	case LUI:
@@ -459,6 +477,8 @@ static void update_reg_stat(struct instr *instr)
 	case BLEZ:
 	case BGTZ:
 	case JR:
+	case MTHI:
+	case MTLO:
 		rs_count[instr->rs]++;
 		break;
 
