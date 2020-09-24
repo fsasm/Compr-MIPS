@@ -132,6 +132,8 @@ struct simulator {
 	uint32_t jump_addr;
 	bool jump;
 	uint32_t reg[32];
+	uint32_t hi;
+	uint32_t lo;
 	uint8_t *dmem;
 	uint8_t *imem;
 	uint32_t dmem_size;
@@ -178,6 +180,59 @@ uint32_t slt(uint32_t rs, uint32_t rt)
 	}
 
 	return (srs < srt) ? 1 : 0;
+}
+
+void mult(struct simulator *sim, uint32_t rs, uint32_t rt)
+{
+	int64_t srs = (int32_t)rs;
+	int64_t srt = (int32_t)rt;
+
+	int64_t result = srs * srt; 
+	sim->lo = result & 0xFFFFFFFF;
+	sim->hi = (result >> 32) & 0xFFFFFFFF;
+}
+
+void multu(struct simulator *sim, uint32_t rs, uint32_t rt)
+{
+	uint64_t result = (uint64_t)rs * (uint64_t)rt;
+	sim->lo = result & 0xFFFFFFFF;
+	sim->hi = (result >> 32) & 0xFFFFFFFF;
+}
+
+void divs(struct simulator *sim, uint32_t rs, uint32_t rt)
+{
+	if (rt == 0) {
+		return;
+	}
+	
+	int32_t srs;
+	if (rs < 0x80000000) {
+		srs = rs;
+	} else {
+		rs = (~rs) + 1;
+		srs = -rs;
+	}
+
+	int32_t srt;
+	if (rt < 0x80000000) {
+		srt = rt;
+	} else {
+		rt = (~rt) + 1;
+		srt = -rt;
+	}
+
+	sim->lo = srs / srt;
+	sim->hi = srs % srt;
+}
+
+void divu(struct simulator *sim, uint32_t rs, uint32_t rt)
+{
+	if (rt == 0) {
+		return;
+	}
+
+	sim->lo = rs / rt;
+	sim->hi = rs % rt;
 }
 
 uint32_t sign_b(uint8_t byte)
@@ -702,6 +757,43 @@ void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2, int trace
 			sim->jump_addr = rs;
 			sim->reg[instr.rd] = sim->cur_pc + size_next_instr;
 			sim->jump = true;
+			break;
+
+		case SYSCALL:
+		case BREAK:
+			force_stop = true;
+			break;
+
+		case MFHI:
+			sim->reg[instr.rd] = sim->hi;
+			break;
+
+		case MFLO:
+			sim->reg[instr.rd] = sim->lo;
+			break;
+
+		case MTHI:
+			sim->hi = sim->reg[instr.rs];
+			break;
+
+		case MTLO:
+			sim->lo = sim->reg[instr.rs];
+			break;
+
+		case MULT:
+			mult(sim, sim->reg[instr.rs], sim->reg[instr.rt]);
+			break;
+
+		case MULTU:
+			multu(sim, sim->reg[instr.rs], sim->reg[instr.rt]);
+			break;
+
+		case DIV:
+			divs(sim, sim->reg[instr.rs], sim->reg[instr.rt]);
+			break;
+
+		case DIVU:
+			divu(sim, sim->reg[instr.rs], sim->reg[instr.rt]);
 			break;
 
 		default:
