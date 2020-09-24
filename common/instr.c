@@ -90,42 +90,36 @@ static enum operation parse_special(uint32_t instr)
 
 	case 0x09: /* JALR */
 		return JALR;
-
+	
+	case 0x0C: /* SYSCALL */
+		return SYSCALL;
+	
 	case 0x0D: /* BREAK */
-		fprintf(stderr, "Unsupported BREAK\n");
-		return INVALID_OP;
+		return BREAK;
 
 	case 0x10: /* MFHI */
-		fprintf(stderr, "Unsupported MFHI\n");
-		return INVALID_OP;
+		return MFHI;
 
 	case 0x11: /* MTHI */
-		fprintf(stderr, "Unsupported MTHI\n");
-		return INVALID_OP;
+		return MTHI;
 
 	case 0x12: /* MFLO */
-		fprintf(stderr, "Unsupported MFLO\n");
-		return INVALID_OP;
+		return MFLO;
 
 	case 0x13: /* MTLO */
-		fprintf(stderr, "Unsupported MTLO\n");
-		return INVALID_OP;
+		return MTLO;
 
 	case 0x18: /* MULT */
-		fprintf(stderr, "Unsupported MULT\n");
-		return INVALID_OP;
+		return MULT;
 
 	case 0x19: /* MULTU */
-		fprintf(stderr, "Unsupported MULTU\n");
-		return INVALID_OP;
+		return MULTU;
 
 	case 0x1A: /* DIV */
-		fprintf(stderr, "Unsupported DIV\n");
-		return INVALID_OP;
+		return DIV;
 
 	case 0x1B: /* DIVU */
-		fprintf(stderr, "Unsupported DIVU\n");
-		return INVALID_OP;
+		return DIVU;
 
 	case 0x20: /* ADD */
 		return ADD;
@@ -1061,6 +1055,38 @@ uint32_t write_instr(struct instr *instr)
 
 	case JALR:
 		return write_r(0x00, instr->rs, 0x00, instr->rd, 0x00, 0x09);
+		break;
+
+	case MULT:
+		return write_r(0x00, instr->rs, instr->rt, 0x00, 0x00, 0x18);
+
+	case MULTU:
+		return write_r(0x00, instr->rs, instr->rt, 0x00, 0x00, 0x19);
+
+	case DIV:
+		return write_r(0x00, instr->rs, instr->rt, 0x00, 0x00, 0x1A);
+
+	case DIVU:
+		return write_r(0x00, instr->rs, instr->rt, 0x00, 0x00, 0x1B);
+
+	case MFHI:
+		return write_r(0x00, 0x00, 0x00, instr->rd, 0x00, 0x10);
+
+	case MFLO:
+		return write_r(0x00, 0x00, 0x00, instr->rd, 0x00, 0x12);
+
+	case MTHI:
+		return write_r(0x00, instr->rs, 0x00, 0x00, 0x00, 0x11);
+
+	case MTLO:
+		return write_r(0x00, instr->rs, 0x00, 0x00, 0x00, 0x13);
+	
+	case SYSCALL:
+		return write_r(0x00, 0x00, 0x00, 0x00, 0x00, 0x0C);
+		break;
+	
+	case BREAK:
+		return write_r(0x00, 0x00, 0x00, 0x00, 0x00, 0x0D);
 		break;
 
 	default:

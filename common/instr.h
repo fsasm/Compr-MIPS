@@ -35,6 +35,16 @@ enum operation {
 	XORI,
 	LUI,
 
+	/* Multiplication and Division */
+	MULT,
+	MULTU,
+	DIV,
+	DIVU,
+	MTHI,
+	MTLO,
+	MFHI,
+	MFLO,
+
 	/* Load & Store - 8 instr. */
 	LB,
 	LH,
@@ -69,6 +79,10 @@ enum operation {
 	/* COP0 instructions */
 	MFC0,
 	MTC0,
+
+	/* Instructions to stop simulation */
+	BREAK,
+	SYSCALL,
 
 	/* Pseudo instructions */
 	NOP,

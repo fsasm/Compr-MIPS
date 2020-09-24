@@ -10,6 +10,7 @@
 
 #define PRINT(...) fprintf(stdout, __VA_ARGS__)
 #define PRINT_R(op)  PRINT("%s r%d, r%d, r%d\n", op, instr->rd, instr->rs, instr->rt)
+#define PRINT_RMD(op)  PRINT("%s r%d, r%d\n", op, instr->rs, instr->rt)
 #define PRINT_R2(op)  PRINT("%s r%d, r%d\n", op, instr->rd, instr->rt)
 #define PRINT_R1(op)  PRINT("%s r%d\n", op, instr->rd)
 #define PRINT_R_REV(op) PRINT("%s r%d, r%d, r%d\n", op, instr->rd, instr->rt, instr->rs)
@@ -198,6 +199,38 @@ void print_instr(struct instr *instr)
 		PRINT("jalr r%d, r%d\n", instr->rd, instr->rs);
 		break;
 
+	case MULT:
+		PRINT_RMD("mult");
+		break;
+
+	case MULTU:
+		PRINT_RMD("multu");
+		break;
+
+	case DIV:
+		PRINT_RMD("div");
+		break;
+
+	case DIVU:
+		PRINT_RMD("divu");
+		break;
+
+	case MTHI:
+		PRINT("mthi r%d\n", instr->rs);
+		break;
+
+	case MTLO:
+		PRINT("mtlo r%d\n", instr->rs);
+		break;
+
+	case MFHI:
+		PRINT_R1("mfhi");
+		break;
+
+	case MFLO:
+		PRINT_R1("mflo");
+		break;
+
 	/* pseudo instructions */
 	case NOP:
 		PRINT("nop\n");
@@ -251,7 +284,15 @@ void print_instr(struct instr *instr)
 		PRINT("lsi r%d, %d\n", instr->rd, instr->simm);
 		break;
 
+	case BREAK:
+		PRINT("break\n");
+		break;
+
+	case SYSCALL:
+		PRINT("syscall\n");
+		break;
+
 	default:
-		fprintf(stderr, "unknown op\n");
+		fprintf(stderr, "unknown op (address: %d - 0x%X)\n", instr->addr, instr->addr);
 	}
 }

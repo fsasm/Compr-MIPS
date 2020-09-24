@@ -407,6 +407,7 @@ static uint32_t write_b(uint8_t opcode, int16_t offset)
 	} else {
 		imm = offset;
 	}
+	imm &= 0x03FF;
 
 	uint16_t instr = 1;
 	instr = (instr << 5)  | opcode;
