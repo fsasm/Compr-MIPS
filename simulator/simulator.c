@@ -40,7 +40,8 @@ static void usage(void)
 	fprintf(stderr, "Usage: %s [-i IMEM_SIZE] [-d DMEM_SIZE] [-n CYCLES] [-t TRACE_FILE] [-cxbr] BIN-FILE [DATA-FILE]\n", program_name);
 	fprintf(stderr, "\t-i\tSize in kiB of the instruction memory\n");
 	fprintf(stderr, "\t-d\tSize in kiB of the data memory\n");
-	fprintf(stderr, "\t-n\tNumber of cycles to execute. Default: %d\n", DEFAULT_NUM_CYCLES);
+	fprintf(stderr, "\t-n\tNumber of cycles to execute. Default: %d; 0: run forever until hitting an BREAK or SYSCALL\n",
+		DEFAULT_NUM_CYCLES);
 	fprintf(stderr, "\t-c\tUse compressed instruction format\n");
 	fprintf(stderr, "\t-x\tPrints every executed instruction\n");
 	fprintf(stderr, "\t-b\tPrints the total dynamic bandwidth of the instruction stream\n");
@@ -474,7 +475,7 @@ void simulator_run(struct simulator *sim, uint64_t num_steps, bool v2, int trace
 {
 	bool force_stop = false;
 
-	for (uint64_t i = 0; i < num_steps && !force_stop; i++) {
+	for (uint64_t i = 0; (i < num_steps || num_steps == 0) && !force_stop; i++) {
 		uint32_t pc = sim->cur_pc;
 		if (pc < PC_START) {
 			fprintf(stdout, "Invalid pc(0x%X). Must be >= 0x%X\n", pc, PC_START);
