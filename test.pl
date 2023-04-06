@@ -29,10 +29,11 @@ my %io_tests = (
 	"lz4_dec",  4000000,
 );
 
-print "test       u c compression rate\n";
+print "| test       | u c | compr. rate | compr. size | uncompr. size | compr. bw | uncompr. bw | bw rate |\n";
+print "+------------+-----+-------------+-------------+---------------+-----------+-------------+---------+\n";
 
 foreach my $test (sort(keys %tests)) {
-	printf "%-10s ", $test;
+	printf "| %-10s | ", $test;
 	# run the simulator with the uncompressed, convert and run with the compressed
 	my $ref = $ref_path . $test . ".out";
 	my $binu = $test_path . $test . ".bin";
@@ -42,12 +43,33 @@ foreach my $test (sort(keys %tests)) {
 	my $num_cycles = $tests{$test};
 
 	# simulate the uncompressed binary
-	my $outu = `$sim -n $num_cycles $binu $datau`;
+	my $outu = `$sim -n $num_cycles -b -t $test.trace $binu $datau`;
 
 	open(REF_FILE, $ref) or die "Couldn't open reference output\n";
 
 	$/ = undef;
 	my $ref_out = <REF_FILE>;
+
+	# convert 
+	`$conv $binu $binc`;
+	
+	# simulate the compressed binary
+	my $outc = `$sim -c -b -n $num_cycles -t $test.trace $binc $datau`;
+
+	# size of the instruction binaries
+	my $usize = -s $binu;
+	my $csize = -s $binc;
+
+	# extract the last line because it contains the dynamic bandwith
+	my @outu_lines = split("\n", $outu);
+	my @outc_lines = split("\n", $outc);
+
+	my ($bandwidthu) = pop(@outu_lines) =~ /(\d+) bytes$/;
+	my ($bandwidthc) = pop(@outc_lines) =~ /(\d+) bytes$/;
+
+	# put the lines back to a single string
+	$outu = join("\n", @outu_lines) . "\n";
+	$outc = join("\n", @outc_lines) . "\n";
 
 	if ($outu ne $ref_out) {
 		print "f ";
@@ -55,27 +77,21 @@ foreach my $test (sort(keys %tests)) {
 		print "s ";
 	}
 
-	# convert 
-	`$conv $binu $binc`;
-	
-	# simulate the compressed binary
-	my $outc = `$sim -c -n $num_cycles $binc $datau`;
-
 	if ($outc ne $ref_out) {
 		print "f ";
 	} else {
 		print "s ";
 	}
 
-	my $usize = -s $binu;
-	my $csize = -s $binc;
+	printf "|      %3.1f %% |      %6i |        %6i |    %6i |      %6i |  %3.1f %% |\n",
+		100.0 * ($csize / $usize), $csize, $usize, $bandwidthc, $bandwidthu,
+		100.0 * ($bandwidthc / $bandwidthu);
 
-	printf "%3.1f %%\n", 100.0 * ($csize / $usize);
 }
 
 # lz4_comp and lz4_dec need escaping
 foreach my $test (sort(keys %io_tests)) {
-	printf "%-10s ", $test;
+	printf "| %-10s | ", $test;
 	# run the simulator with the uncompressed, convert and run with the compressed
 	my $ref = $ref_path . $test . ".out";
 	my $ref_in = $ref_path . $test . ".in";
@@ -93,17 +109,24 @@ foreach my $test (sort(keys %io_tests)) {
 	$/ = undef;
 	my $ref_out = <REF_FILE>;
 
-	if ($outu ne $ref_out) {
-		print "f ";
-	} else {
-		print "s ";
-	}
-
 	# convert 
 	`$conv $binu $binc`;
 	
 	# simulate the compressed binary
 	my $outc = `cat $ref_in | $escp | $sim -c -n $num_cycles $binc $datau`;
+
+	# size of the instruction binaries
+	my $usize = -s $binu;
+	my $csize = -s $binc;
+
+	my $bandwidthu = 0;
+	my $bandwidthc = 0;
+
+	if ($outu ne $ref_out) {
+		print "f ";
+	} else {
+		print "s ";
+	}
 
 	if ($outc ne $ref_out) {
 		print "f ";
@@ -111,9 +134,7 @@ foreach my $test (sort(keys %io_tests)) {
 		print "s ";
 	}
 
-	my $usize = -s $binu;
-	my $csize = -s $binc;
-
-	printf "%3.1f %%\n", 100.0 * ($csize / $usize);
+	printf "|      %3.1f %% |      %6i |        %6i | %9i |   %9i |\n",
+		100.0 * ($csize / $usize), $csize, $usize, $bandwidthc, $bandwidthu;
 }
 
