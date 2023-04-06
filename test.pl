@@ -3,8 +3,8 @@
 use strict;
 use warnings;
 
-my $ref_path = "../test/c/ref/";
-my $test_path = "../test/c/";
+my $ref_path = "./bench/ref/";
+my $test_path = "./bench/";
 my $sim = "./simulator/simulator";
 my $conv = "./converter/converter";
 my $escp = "./uart_escape/uart_escape";
