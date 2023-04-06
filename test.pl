@@ -43,7 +43,7 @@ foreach my $test (sort(keys %tests)) {
 	my $num_cycles = $tests{$test};
 
 	# simulate the uncompressed binary
-	my $outu = `$sim -n $num_cycles -b -t $test.trace $binu $datau`;
+	my $outu = `$sim -n $num_cycles -t $test.u.trace $binu $datau`;
 
 	open(REF_FILE, $ref) or die "Couldn't open reference output\n";
 
@@ -54,22 +54,14 @@ foreach my $test (sort(keys %tests)) {
 	`$conv $binu $binc`;
 	
 	# simulate the compressed binary
-	my $outc = `$sim -c -b -n $num_cycles -t $test.trace $binc $datau`;
+	my $outc = `$sim -c -n $num_cycles -t $test.c.trace $binc $datau`;
 
 	# size of the instruction binaries
 	my $usize = -s $binu;
 	my $csize = -s $binc;
 
-	# extract the last line because it contains the dynamic bandwith
-	my @outu_lines = split("\n", $outu);
-	my @outc_lines = split("\n", $outc);
-
-	my ($bandwidthu) = pop(@outu_lines) =~ /(\d+) bytes$/;
-	my ($bandwidthc) = pop(@outc_lines) =~ /(\d+) bytes$/;
-
-	# put the lines back to a single string
-	$outu = join("\n", @outu_lines) . "\n";
-	$outc = join("\n", @outc_lines) . "\n";
+	my $bandwidthu = -s "$test.u.trace";
+	my $bandwidthc = -s "$test.c.trace";
 
 	if ($outu ne $ref_out) {
 		print "f ";
@@ -83,7 +75,7 @@ foreach my $test (sort(keys %tests)) {
 		print "s ";
 	}
 
-	printf "|      %3.1f %% |      %6i |        %6i |    %6i |      %6i |  %3.1f %% |\n",
+	printf "|      %3.1f %% |      %6i |        %6i | %9i |   %9i |  %3.1f %% |\n",
 		100.0 * ($csize / $usize), $csize, $usize, $bandwidthc, $bandwidthu,
 		100.0 * ($bandwidthc / $bandwidthu);
 
@@ -102,7 +94,7 @@ foreach my $test (sort(keys %io_tests)) {
 	my $num_cycles = $io_tests{$test};
 
 	# simulate the uncompressed binary
-	my $outu = `cat $ref_in | $escp | $sim -n $num_cycles $binu $datau`;
+	my $outu = `cat $ref_in | $escp | $sim -n $num_cycles -t $test.u.trace $binu $datau`;
 
 	open(REF_FILE, $ref) or die "Couldn't open reference output\n";
 
@@ -113,14 +105,14 @@ foreach my $test (sort(keys %io_tests)) {
 	`$conv $binu $binc`;
 	
 	# simulate the compressed binary
-	my $outc = `cat $ref_in | $escp | $sim -c -n $num_cycles $binc $datau`;
+	my $outc = `cat $ref_in | $escp | $sim -c -n $num_cycles -t $test.c.trace $binc $datau`;
 
 	# size of the instruction binaries
 	my $usize = -s $binu;
 	my $csize = -s $binc;
 
-	my $bandwidthu = 0;
-	my $bandwidthc = 0;
+	my $bandwidthu = -s "$test.u.trace";
+	my $bandwidthc = -s "$test.c.trace";
 
 	if ($outu ne $ref_out) {
 		print "f ";
@@ -134,7 +126,8 @@ foreach my $test (sort(keys %io_tests)) {
 		print "s ";
 	}
 
-	printf "|      %3.1f %% |      %6i |        %6i | %9i |   %9i |\n",
-		100.0 * ($csize / $usize), $csize, $usize, $bandwidthc, $bandwidthu;
+	printf "|      %3.1f %% |      %6i |        %6i | %9i |   %9i |  %3.1f %% |\n",
+		100.0 * ($csize / $usize), $csize, $usize, $bandwidthc, $bandwidthu,
+		100.0 * ($bandwidthc / $bandwidthu);
 }
 
