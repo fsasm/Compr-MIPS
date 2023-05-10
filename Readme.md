@@ -17,8 +17,8 @@ on the integer part and leaves out the floating point and privileged parts,
 only some adjustment are needed.
 
 With the help of some tools the most used instructions were selected and
-transformed into a 16-bit format. Like the C-extension from RISC-V the 16-bit
-instruction has a 32-bit instruction equivalent. 
+transformed into a 16-bit format. Like the C-extension from RISC-V every 16-bit
+instruction has a 32-bit instruction equivalent.
 
 As a proof-of-concept a simple processor core was developed in VHDL for the
 Terasic Cyclone V GX Starter Kit. This processor supports both instructions sets
@@ -74,3 +74,12 @@ The toy benchmark consists of the following programs:
 * `mandelbrot`: calculates the mandelbrot fractal. It contains heavy fixed point arithmetic workload.
 * `qsort`: quick sort 
 * `md5`, `sha1`, `sha256`, `sha512`: calculates the cryptographic hash value of the data block. `sha512` uses 64-bit arithmetic
+
+## How to compile
+For the tools only a C99 compiler with POSIX extension is needed. To compile
+just execute `make` in every tool folder. The toy benchmark needs a cross-compiler
+that targets bare-metal MIPS-I and not some hosted target. GCC will have the
+`mips-unknown-elf` prefix when it targets bare-metal MIPS-I. The toy benchmark
+was tested with GCC 5.2.0 from crosstool-NG and probably newer version will also
+work. Please read the documentation of crosstool-NG to learn on how to create 
+the correct cross-compiler. 
