@@ -56,3 +56,21 @@ Compiled with `-Os` and GCC 5.2.0
 | echo       | s s |      63.3 % |         276 |           436 |    523528 |      827940 |  63.2 % |
 | lz4_comp   | s s |      73.3 % |        5070 |          6920 |  18961100 |    27808396 |  68.2 % |
 | lz4_dec    | s s |      73.7 % |        2180 |          2956 |   9077186 |    13339732 |  68.0 % |
+
+## Structure
+* `analyzer/`: analyzes program code and prints statistics the instruction distribution.
+* `bench/`: toy benchmark programs that can run on bare-metal CPUs
+* `common/`: collection of functions and data structures that are used by multiple tools
+* `converter/`: converts program code that uses the old uncompressed format into program code that used the new compressed format
+* `disas/`: simple disassembler that can be helpfull during debugging
+* `simulator/`: simulator for both instructions format
+* `uart_escape/`: encodes binary data so that it does not interfere with control characters
+
+The toy benchmark consists of the following programs:
+* `calc`: calculator for simple mathematical terms. It contains fixed point arithmetic and parsing workload.
+* `echo`: copies the input to the output
+* `hello`: prints "Hello World!"
+* `lz4_comp`, `lz4_dec`: compressor and decompressor that use the lz4 compression algorithm
+* `mandelbrot`: calculates the mandelbrot fractal. It contains heavy fixed point arithmetic workload.
+* `qsort`: quick sort 
+* `md5`, `sha1`, `sha256`, `sha512`: calculates the cryptographic hash value of the data block. `sha512` uses 64-bit arithmetic
