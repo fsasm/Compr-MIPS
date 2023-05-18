@@ -79,6 +79,25 @@ A list of instructions and how they are encoded into the 16-bit formats is in
 `common/v2_instr.c`.
 
 ## Results
+Here are the results of the toy benchmark (found in `bench/`). The compiler
+used to compile the programs is GCC 5.2.0 build by crosstool-NG and targets
+bare-metal MIPS-I cores. Only two optimization options are considered here as
+these are the most common and have great influence on the final program size.
+
+The size columns represent the compressed and uncompressed program size without
+the data sections. This is also known as static program size. The bandwidth
+column represent the size of the instruction stream of a complete execution of
+the program. This is also known as the dynamic program size. The bandwidth is
+heavily dependent of the input data, which is fixed in the benchmark. 
+The units for the size and bandwidth (bw) columns is bytes.
+
+The results show that up to half of the instructions of a program can be converted
+to a compressed format, which leads to a compression rate of about 66 %. However
+many programs have a compression ratio of about 73 % which means that about 46 %
+of instructions could be compressed. Also the bandwidth shows a similar 
+compression ratio. All in all these results show that the idea works and needs
+further measurement with larger programs. 
+
 Compiled with `-O2` and GCC 5.2.0
 
 | test     | compr. size | uncompr. size | compr. rate | compr. bw | uncompr. bw | bw rate |
@@ -146,3 +165,7 @@ Second, the compilers assume that all instructions are 32-bit long and create
 constructs that build upon this assumption. One such construct is the jump table
 that is used for switch statements. GCC has a flag that prevents the generation
 of jump tables. 
+
+The compilers are not aware of the compressed instructions and do not select
+the optimal instructions for it. Compilers that are aware of it could rearrange
+the registers so that more instructions could be compressed. 
