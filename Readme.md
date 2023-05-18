@@ -26,6 +26,58 @@ and should show that the additional
 effort to support both instructions sets is negligible, especially in the
 decode unit. The processor core is not part of this repository. 
 
+## Instruction format
+The original MIPS-I ISA uses three instruction formats, R-, I- and J-Type.
+All three instruction formats are 32-bit long and have a 6-bit opcode field in 
+the top bits. The new proposed instruction format are either 16 or 32-bit long.
+The 32-bit format have a 5-bit opcode field and the top bit is used to distinguish
+between 32-bit and 16-bit format. In a different view the most significant bit 
+of the 6-bit opcode field is used to distinguish between 32-bit and 16-bit format.
+
+Besides the smaller opcode field, the new and the old 32-bit instruction format
+are the same. Also the encodings of the instructions are the same, except for
+the memory access instructions. The memory instructions have the most significant
+bit of the opcode field set, which collides with the new instruction format, where
+this bit indicates a 16-bit instruction format. So only for these instructions
+the opcode value were changed. Note that this work does not account for floating-point
+and other co-processor instructions, where further problems arise with the smaller
+opcode field. 
+
+Another difference are branch and jump instructions. These
+instructions assume that all instructions are 32-bit long and therefore multiply
+the offset by 4. With 16-bit instructions this assumption does not hold and the
+branch offset have to be multiplied by 2. This also means that the range of the
+branch instructions is halved unless another format is created that provides
+an additional bit to the offset field. In practise it is rare that the branch
+offset is so large.
+
+There are three 16-bit instruction formats. All three have the top bit for the
+instruction size and the 5-bit opcode field. The destination register `rd` is
+also the first source register `rs`. The analysis of the toy benchmark showed
+that many instructions reused a source register as a destination register and this
+instruction formats make use of this fact. Also many branches have a short offset
+because there are used for constructs like an if-then-else block. The offset
+field is multiplied by 2 which means that the effective range is [-1024; +1022]
+bytes.
+
+```
+     +----------+------------+-----------+---------+
+R16: | size (1) | opcode (5) | rd/rs (5) |  rt (5) |
+     +----------+------------+-----------+---------+
+I16: | size (1) | opcode (5) | rd/rs (5) | imm (5) |
+     +----------+------------+-----------+---------+
+J16: | size (1) | opcode (5) |      offset (10)    |
+     +----------+------------+-----------+---------+
+```
+
+Every instruction in a 16-bit format has an equivalent in a 32-bit format. With
+this restriction every 16-bit instruction can easily be converted to a 32-bit
+instruction. For processor designs this means, that they only need small
+modifications to the decode stage and can reuse most parts of the decoder.
+
+A list of instructions and how they are encoded into the 16-bit formats is in
+`common/v2_instr.c`.
+
 ## Results
 Compiled with `-O2` and GCC 5.2.0
 
