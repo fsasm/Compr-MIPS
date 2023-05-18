@@ -135,3 +135,14 @@ that targets bare-metal MIPS-I and not some hosted target. GCC will have the
 was tested with GCC 5.2.0 from crosstool-NG and probably newer version will also
 work. Please read the documentation of crosstool-NG to learn on how to create 
 the correct cross-compiler. 
+
+## Drawbacks
+During research and development some problems were found. First the opcode
+space is more than half full which means that shrinking the opcode field by
+one bit makes problems. Mostly the co-processor instructions make problems
+and they would need a redesign.
+
+Second, the compilers assume that all instructions are 32-bit long and create
+constructs that build upon this assumption. One such construct is the jump table
+that is used for switch statements. GCC has a flag that prevents the generation
+of jump tables. 
