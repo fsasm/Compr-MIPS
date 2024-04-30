@@ -158,8 +158,10 @@ the correct cross-compiler.
 ## Drawbacks
 During research and development some problems were found. First the opcode
 space is more than half full which means that shrinking the opcode field by
-one bit makes problems. Mostly the co-processor instructions make problems
-and they would need a redesign.
+one bit already creates problems. Mostly the co-processor instructions (e.g.
+floating point instruction) create problems and they would need a redesign.
+Some instructions, i.e. load and store, have the top bit of the opcode set
+and need a careful remapping.
 
 Second, the compilers assume that all instructions are 32-bit long and create
 constructs that build upon this assumption. One such construct is the jump table
@@ -168,4 +170,9 @@ of jump tables.
 
 The compilers are not aware of the compressed instructions and do not select
 the optimal instructions for it. Compilers that are aware of it could rearrange
-the registers so that more instructions could be compressed. 
+the registers so that more instructions could be compressed. Because the register
+fields are still 5-bit wide, it puts less pressure on the register allocator.
+But because an instruction can only be compressed if one of the source registers
+is also the destination register, it still puts pressure on the register allocator.
+As many allocators can also handle the x86 architecture this shouldn't be much
+of an issue.
